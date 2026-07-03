@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 
 from sentinel.cognee_client import CogneeClient
 from sentinel.ingest import process_report
@@ -9,6 +10,10 @@ from sentinel.seed_loader import load_seed_data
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Cognee's LLM output contains characters (e.g. U+202F) that Windows
+    # cp1252 consoles can't encode — never let printing kill the pipeline.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(prog="sentinel", description="CI memory + QA reviewer on Cognee")
     sub = ap.add_subparsers(dest="command", required=True)
 
