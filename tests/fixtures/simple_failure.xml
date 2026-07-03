@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="app.tests.test_webhook" tests="2" failures="1" errors="0">
+    <testcase name="test_concurrent_retry_creates_single_charge" classname="app.tests.test_webhook" time="0.5">
+      <failure message="AssertionError: expected 1 charge, found 2: duplicate charge after concurrent webhook retry" type="AssertionError">
+Traceback (most recent call last):
+  File "app/tests/test_webhook.py", line 12, in test_concurrent_retry_creates_single_charge
+    assert len(charges) == 1
+AssertionError: expected 1 charge, found 2: duplicate charge after concurrent webhook retry
+      </failure>
+    </testcase>
+    <testcase name="test_webhook_endpoint_returns_charge_count" classname="app.tests.test_webhook" time="0.1"/>
+  </testsuite>
+</testsuites>

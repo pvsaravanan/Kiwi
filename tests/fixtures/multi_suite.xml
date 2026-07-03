@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="tests.auth">
+    <testcase name="test_login_timeout" classname="tests.auth.test_login">
+      <failure message="TimeoutError: Request timed out after 30s" type="TimeoutError">
+Traceback: TimeoutError after 30s
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="tests.orders">
+    <testcase name="test_order_create" classname="tests.orders.test_create">
+      <error message="ConnectionError: DB pool exhausted" type="ConnectionError">
+ConnectionError: DB pool exhausted
+      </error>
+    </testcase>
+  </testsuite>
+</testsuites>
