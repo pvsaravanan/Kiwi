@@ -11,10 +11,13 @@ dependencies = [
     "anthropic>=0.40",
     "streamlit>=1.40",
     "pyvis>=0.3.2",
+    "google-genai>=0.1.1",
+    "rich>=13.7.0",
 ]
 
 [project.scripts]
 sentinel = "sentinel.cli:main"
+kiwi = "sentinel.kiwi_cli:main"
 
 [dependency-groups]
 dev = [

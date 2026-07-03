@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+import anthropic
+
 from sentinel.adapters.junit import FailureRecord
 from sentinel.ingest import IngestResult
 from sentinel.reviewer import build_review, fallback_review, ground_review, post_pr_comment
@@ -69,3 +71,37 @@ def test_post_pr_comment_hits_github_api():
     assert url == "https://api.github.com/repos/o/r/issues/7/comments"
     assert http.post.call_args.kwargs["json"] == {"body": "hello"}
     assert "Bearer t" in http.post.call_args.kwargs["headers"]["Authorization"]
+
+
+def test_build_review_calls_gemini_and_grounds(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    response_mock = MagicMock()
+    response_mock.text = "Matches prior incident: customer billed twice after gateway retry."
+    
+    with patch("sentinel.reviewer.genai") as mock_genai:
+        mock_genai.Client.return_value.models.generate_content.return_value = response_mock
+        r = IngestResult(failure=FAILURE, matched=True, history=HISTORY)
+        out = build_review(r, diff="diff --git a/x b/x")
+        
+        mock_genai.Client.assert_called_once()
+        generate_kwargs = mock_genai.Client.return_value.models.generate_content.call_args.kwargs
+        assert generate_kwargs["model"] == "gemini-3-flash-preview"
+        assert "billed twice" in out
+
+
+def test_build_review_does_not_fallback_to_gemini_when_claude_fails(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-claude-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    
+    with patch("sentinel.reviewer.anthropic.Anthropic") as mock_anthropic_class, patch("sentinel.reviewer.genai") as mock_genai:
+        mock_anthropic_class.return_value.messages.create.side_effect = anthropic.APIError("Claude failed", request=MagicMock(), body={})
+        
+        r = IngestResult(failure=FAILURE, matched=True, history=HISTORY)
+        out = build_review(r, diff="diff --git a/x b/x")
+        
+        mock_anthropic_class.return_value.messages.create.assert_called_once()
+        mock_genai.Client.assert_not_called()
+        assert "idempotency key" in out  # falls back to fallback_review
+
+
