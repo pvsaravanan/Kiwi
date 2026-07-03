@@ -18,11 +18,50 @@ Kiwi is a terminal-native, intelligent QA assistant designed to integrate graph-
 
 Kiwi uses a layered architecture separating entry surfaces, agent reasoning, memory matching, and subprocess environments.
 
+### Component Architecture
+
+```mermaid
+graph TD
+    UI[Ink UI Surface] <--> API[FastAPI Backend]
+    API <--> Memory[Cognee Graph Memory]
+    API <--> Reviewer[Reviewer Engine]
+    Reviewer <--> LLM[LLM API Gateways]
 ```
-[ Ink UI Surface ] ◄──► [ FastAPI Backend ] ◄──► [ Reviewer Engine ] ◄──► [ LLM APIs ]
-                               ▲
-                               ▼
-                    [ Cognee Graph Memory ]
+
+### Turn Execution Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant CLI as Ink CLI REPL
+    participant Srv as FastAPI Backend
+    participant DB as Cognee Graph Memory
+    participant AI as Reviewer Engine
+
+    User->>CLI: run /test
+    CLI->>Srv: POST /kiwi/test
+    Srv->>Srv: Run pytest command
+    alt Test Crashes
+        Srv->>DB: recall(test_name)
+        DB-->>Srv: Return matching historical incident traces
+        Srv->>AI: build_review(failure, history)
+        AI-->>Srv: Return n-gram validated review
+        Srv->>DB: remember(new_failure)
+    end
+    Srv-->>CLI: Return test output & reviews
+    CLI-->>User: Render review in terminal
+```
+
+### Configuration Priority Resolution
+
+```mermaid
+graph LR
+    Local[1. .env.local] --> Combine[Environment Pool]
+    ModeLocal[2. .env.mode.local] --> Combine
+    Mode[3. .env.mode] --> Combine
+    Root[4. .env] --> Combine
+    Combine --> Config[Kiwi Config Loader]
+    State[kiwi_session_state.json] -- Bypasses env if logged in --> Config
 ```
 
 1. **Surface Layer**: Built with React and Ink, providing terminal components, state management, and autocomplete command suggestions.
