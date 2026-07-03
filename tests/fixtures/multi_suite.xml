@@ -3,10 +3,7 @@
   <testsuite name="tests.auth">
     <testcase name="test_login_timeout" classname="tests.auth.test_login">
       <failure message="TimeoutError: Request timed out after 30s" type="TimeoutError">
-Traceback (most recent call last):
-  File "tests/auth/test_login.py", line 22, in test_login_timeout
-    response = client.post("/login", timeout=30)
-TimeoutError: Request timed out after 30s
+Traceback: TimeoutError after 30s
       </failure>
     </testcase>
   </testsuite>

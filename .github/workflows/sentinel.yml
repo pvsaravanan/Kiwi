@@ -1,0 +1,43 @@
+name: Sentinel
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  test-and-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # get_diff() needs HEAD~1
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install
+        run: uv sync
+
+      - name: Run demo app test suite (flake armed)
+        run: uv run pytest app/tests -v --junitxml=test-results.xml
+        env:
+          FLAKY_MODE: "1"
+        continue-on-error: true
+
+      - name: Sentinel — remember, recall, review
+        if: always()
+        env:
+          COGNEE_BASE_URL: ${{ secrets.COGNEE_BASE_URL }}
+          COGNEE_API_KEY: ${{ secrets.COGNEE_API_KEY }}
+          COGNEE_TENANT_ID: ${{ secrets.COGNEE_TENANT_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          uv run sentinel ingest test-results.xml --ci --review
+          --run-id "${{ github.run_id }}"
+          ${{ github.event_name == 'pull_request' && format('--post --repo {0} --pr {1}', github.repository, github.event.pull_request.number) || '' }}
