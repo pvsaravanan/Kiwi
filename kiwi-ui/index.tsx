@@ -359,7 +359,43 @@ function App() {
         setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Use /test to run the tests and generate a review, or review a test directly.' }])
       } else {
         const resp = await axios.post(`${BACKEND_URL}/kiwi/query`, { query: text })
-        setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: resp.data.answer }])
+        const data = resp.data
+        if (data.action) {
+          const action = data.action
+          const args = data.args || {}
+          if (action === 'clear') {
+            setMessages([])
+            setIsLoading(false)
+            return
+          }
+          if (action === 'exit') {
+            exit()
+            setIsLoading(false)
+            return
+          }
+          
+          let cmd = `/${action}`
+          if (action === 'test' && args.path) {
+            cmd += ` ${args.path}`
+          } else if (action === 'remember' && args.text) {
+            cmd += ` ${args.text}`
+          } else if (action === 'recall' && args.query) {
+            cmd += ` ${args.query}`
+          } else if (action === 'forget') {
+            cmd += ` ${args.all ? '--all' : (args.dataset || '')}`
+          } else if (action === 'resolve' && args.summary) {
+            cmd += ` ${args.summary}`
+          } else if (action === 'flaky' && args.test_name) {
+            cmd += ` ${args.test_name}`
+          } else if (action === 'history' && args.test_name) {
+            cmd += ` ${args.test_name}`
+          }
+          
+          // Re-submit the translated command
+          await handleSubmit(cmd)
+        } else {
+          setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: data.answer }])
+        }
       }
     } catch (e: any) {
       const errMsg = e.response?.data?.detail || e.message

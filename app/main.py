@@ -142,9 +142,42 @@ def kiwi_query(req: QueryReq):
 
         system_instruction = (
             "You are Kiwi, a developer's QA assistant with access to historical memory of test failures and resolutions. "
-            "Synthesize clear, grounded, and concise answers."
+            "The user might ask you to perform an action or run a command, or they might ask a general question. "
+            "\n\n"
+            "If the user wants to perform an action (such as running tests, clearing screen, remembering details, recalling memory, etc.), "
+            "you MUST output a JSON object containing the action details and arguments. Do NOT output any other text beside the JSON.\n"
+            "Supported actions:\n"
+            "1. 'test': Run pytest. Args: 'path' (string, path to a specific test file, optional).\n"
+            "2. 'clear': Clear the conversation screen history.\n"
+            "3. 'exit': Exit the Kiwi session.\n"
+            "4. 'remember': Store manual context/incident details. Args: 'text' (string, the fact to remember).\n"
+            "5. 'recall': Query memory for similar past issues. Args: 'query' (string, search query).\n"
+            "6. 'forget': Clear memory datasets. Args: 'all' (boolean, true to clear all), 'dataset' (string, dataset name to clear).\n"
+            "7. 'resolve': Log the fix for the last failing test. Args: 'summary' (string, description of the fix).\n"
+            "8. 'flaky': Show flaky test tracking counts. Args: 'test_name' (string, optional).\n"
+            "9. 'history': List failure timeline logs for a specific test. Args: 'test_name' (string).\n"
+            "10. 'session': Show active session logs.\n"
+            "11. 'help': Show the list of available commands.\n"
+            "\n"
+            "Format for actions (strict JSON):\n"
+            '{"action": "<action_name>", "args": { ... }}\n'
+            "\n"
+            "If the user is asking a general question (not requesting an action), answer it normally utilizing the context provided below.\n"
+            f"Context:\n{context_str}"
         )
         ans = ask_llm(provider, llm, prompt, system_instruction, model)
+        
+        # Check if response is a JSON action command
+        import json
+        stripped = ans.strip()
+        if stripped.startswith("{") and stripped.endswith("}"):
+            try:
+                parsed = json.loads(stripped)
+                if "action" in parsed:
+                    return {"action": parsed["action"], "args": parsed.get("args", {})}
+            except Exception:
+                pass
+
         return {"answer": ans}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
