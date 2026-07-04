@@ -447,8 +447,8 @@ function App() {
           </Box>
         </Box>
       }
-      commands={[
-        { name: 'login', description: 'Login with username and password', onExecute: () => handleSubmit('/login') },
+      commands={loginState.step !== 'idle' ? [] : [
+        { name: 'login', description: 'Login with credentials (interactive)', onExecute: () => handleSubmit('/login') },
         { name: 'provider', description: 'Switch active LLM provider', onExecute: () => handleSubmit('/provider') },
         { name: 'model', description: 'Switch active LLM model', onExecute: () => handleSubmit('/model') },
         { name: 'config', description: 'Show active configuration and settings', onExecute: () => handleSubmit('/config') },
