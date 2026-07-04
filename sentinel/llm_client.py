@@ -102,3 +102,35 @@ def ask_llm(provider, client, prompt: str, system_instruction: str = "You are Ki
         except Exception as exc:
             return f"Error communicating with OpenAI: {exc}"
     return ""
+
+
+def validate_llm_credentials(provider: str, model: str) -> tuple[bool, str]:
+    """
+    Attempts a minimal API call to verify the active LLM credentials.
+    Returns (True, "") if successful, or (False, "error message") on failure.
+    """
+    p, client, m = get_llm_client()
+    if not p or not client:
+        return False, f"No valid API key or client setup found in environment for {provider.capitalize()}."
+    
+    try:
+        if p == "anthropic":
+            client.messages.create(
+                model=m,
+                max_tokens=5,
+                messages=[{"role": "user", "content": "ping"}]
+            )
+        elif p == "gemini":
+            client.models.generate_content(
+                model=m,
+                contents="ping"
+            )
+        elif p == "openai":
+            client.chat.completions.create(
+                model=m,
+                messages=[{"role": "user", "content": "ping"}],
+                max_tokens=5
+            )
+        return True, ""
+    except Exception as e:
+        return False, str(e)

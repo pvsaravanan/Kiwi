@@ -293,6 +293,17 @@ def kiwi_login(req: LoginDetails):
         state["llm_provider"] = req.llm_provider
         state["llm_model"] = req.llm_model
         save_state(state)
+
+        # Validate LLM API credentials instantly
+        from sentinel.llm_client import validate_llm_credentials
+        valid, err = validate_llm_credentials(req.llm_provider.lower(), req.llm_model)
+        if not valid:
+            state["is_logged_in"] = False
+            save_state(state)
+            raise HTTPException(status_code=400, detail=f"LLM API Key verification failed: {err}")
+
         return {"status": "success"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
