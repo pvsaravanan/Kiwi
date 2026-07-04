@@ -102,11 +102,13 @@ function App() {
     }
   })
 
-  const handleSubmit = useCallback(async (text: string) => {
+  const handleSubmit = useCallback(async (text: string, silent: boolean = false) => {
     setIsLoading(true)
     const userMsgId = Math.random().toString(36).substring(7)
     const userMsg: Message = { id: userMsgId, role: 'user', content: text }
-    setMessages(prev => [...prev, userMsg])
+    if (!silent) {
+      setMessages(prev => [...prev, userMsg])
+    }
 
     const assistantMsgId = Math.random().toString(36).substring(7)
 
@@ -391,8 +393,8 @@ function App() {
             cmd += ` ${args.test_name}`
           }
           
-          // Re-submit the translated command
-          await handleSubmit(cmd)
+          // Re-submit the translated command silently without printing to screen
+          await handleSubmit(cmd, true)
         } else {
           setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: data.answer }])
         }
