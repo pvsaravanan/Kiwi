@@ -360,11 +360,98 @@ function App() {
       } else if (text.startsWith('/review')) {
         setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Use /test to run the tests and generate a review, or review a test directly.' }])
       } else {
-        const resp = await axios.post(`${BACKEND_URL}/kiwi/query`, { query: text })
-        const data = resp.data
-        if (data.action) {
-          const action = data.action
-          const args = data.args || {}
+        // Initialize an assistant message with a thinking block
+        const assistantMsg: Message = {
+          id: assistantMsgId,
+          role: 'assistant',
+          content: [
+            { type: 'thinking', text: 'Initializing...', collapsed: false }
+          ]
+        }
+        setMessages(prev => [...prev, assistantMsg])
+
+        const response = await fetch(`${BACKEND_URL}/kiwi/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: text })
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+        let accumulatedText = ''
+        let actionPayload: any = null
+        
+        if (reader) {
+          let buffer = ''
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop() || ''
+            
+            for (const line of lines) {
+              if (!line.trim()) continue
+              try {
+                const parsed = JSON.parse(line)
+                if (parsed.type === 'thinking') {
+                  setMessages(prev => prev.map(m => {
+                    if (m.id === assistantMsgId) {
+                      const contents = [...(Array.isArray(m.content) ? m.content : [])]
+                      const thinkIdx = contents.findIndex(c => c.type === 'thinking')
+                      if (thinkIdx >= 0) {
+                        contents[thinkIdx] = { type: 'thinking', text: parsed.text, collapsed: false }
+                      } else {
+                        contents.unshift({ type: 'thinking', text: parsed.text, collapsed: false })
+                      }
+                      return { ...m, content: contents }
+                    }
+                    return m
+                  }))
+                } else if (parsed.type === 'chunk' || parsed.type === 'text') {
+                  accumulatedText += parsed.text
+                  setMessages(prev => prev.map(m => {
+                    if (m.id === assistantMsgId) {
+                      const contents = [...(Array.isArray(m.content) ? m.content : [])]
+                      
+                      const thinkIdx = contents.findIndex(c => c.type === 'thinking')
+                      if (thinkIdx >= 0) {
+                        contents[thinkIdx] = { ...contents[thinkIdx], collapsed: true }
+                      }
+                      
+                      const textIdx = contents.findIndex(c => c.type === 'text')
+                      if (textIdx >= 0) {
+                        contents[textIdx] = { type: 'text', text: accumulatedText }
+                      } else {
+                        contents.push({ type: 'text', text: accumulatedText })
+                      }
+                      return { ...m, content: contents }
+                    }
+                    return m
+                  }))
+                } else if (parsed.type === 'action') {
+                  actionPayload = parsed
+                } else if (parsed.type === 'error') {
+                  throw new Error(parsed.message)
+                }
+              } catch (err) {
+                // ignore split errors
+              }
+            }
+          }
+        }
+
+        if (actionPayload) {
+          // Remove the temporary assistant thinking message
+          setMessages(prev => prev.filter(m => m.id !== assistantMsgId))
+          
+          const action = actionPayload.action
+          const args = actionPayload.args || {}
           if (action === 'clear') {
             setMessages([])
             setIsLoading(false)
@@ -393,10 +480,7 @@ function App() {
             cmd += ` ${args.test_name}`
           }
           
-          // Re-submit the translated command silently without printing to screen
           await handleSubmit(cmd, true)
-        } else {
-          setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: data.answer }])
         }
       }
     } catch (e: any) {
@@ -413,6 +497,53 @@ function App() {
     const label = isUser ? "You" : "Kiwi";
     const color = isUser ? "cyan" : "#84cc16"; // beautiful lime/green for Kiwi
 
+    const renderContent = () => {
+      if (typeof message.content === 'string') {
+        return <Text>{message.content}</Text>;
+      }
+      return (
+        <Box flexDirection="column">
+          {message.content.map((c: any, i: number) => {
+            if (c.type === 'thinking') {
+              return (
+                <Box key={i} flexDirection="column" marginY={1}>
+                  <Box
+                    onClick={() => {
+                      setMessages(prev => prev.map(m => {
+                        if (m.id === message.id && Array.isArray(m.content)) {
+                          const contents = m.content.map(item => {
+                            if (item.type === 'thinking') {
+                              return { ...item, collapsed: !item.collapsed }
+                            }
+                            return item;
+                          });
+                          return { ...m, content: contents }
+                        }
+                        return m;
+                      }))
+                    }}
+                  >
+                    <Text dimColor>
+                      {c.collapsed ? '▶ Thinking (click to expand)' : '▼ Thinking'}
+                    </Text>
+                  </Box>
+                  {!c.collapsed && (
+                    <Box marginLeft={2} paddingLeft={1} borderStyle="round" borderColor="gray">
+                      <Text italic dimColor>{c.text}</Text>
+                    </Box>
+                  )}
+                </Box>
+              );
+            }
+            if (c.type === 'text') {
+              return <Text key={i}>{c.text}</Text>;
+            }
+            return null;
+          })}
+        </Box>
+      );
+    };
+
     return (
       <Box flexDirection="column" key={message.id}>
         <Box>
@@ -423,7 +554,7 @@ function App() {
           </Text>
         </Box>
         <Box marginLeft={2}>
-          <Text>{message.content}</Text>
+          {renderContent()}
         </Box>
       </Box>
     );

@@ -104,6 +104,52 @@ def ask_llm(provider, client, prompt: str, system_instruction: str = "You are Ki
     return ""
 
 
+def stream_llm(provider, client, prompt: str, system_instruction: str = "You are Kiwi, a helpful QA assistant.", model=None):
+    if provider == "anthropic":
+        try:
+            with client.messages.stream(
+                model=model or "claude-opus-4-8",
+                max_tokens=1024,
+                system=system_instruction,
+                messages=[{"role": "user", "content": prompt}]
+            ) as stream:
+                for text in stream.text_stream:
+                    yield text
+        except Exception as exc:
+            yield f"Error communicating with Anthropic: {exc}"
+    elif provider == "gemini":
+        try:
+            from google.genai import types
+            response = client.models.generate_content_stream(
+                model=model or "gemini-3-flash-preview",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    max_output_tokens=1024,
+                )
+            )
+            for chunk in response:
+                yield chunk.text or ""
+        except Exception as exc:
+            yield f"Error communicating with Gemini: {exc}"
+    elif provider == "openai":
+        try:
+            resp = client.chat.completions.create(
+                model=model or "gpt-5.5",
+                messages=[
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=1024,
+                stream=True
+            )
+            for chunk in resp:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except Exception as exc:
+            yield f"Error communicating with OpenAI: {exc}"
+
+
 def validate_llm_credentials(provider: str, model: str) -> tuple[bool, str]:
     """
     Attempts a minimal API call to verify the active LLM credentials.
