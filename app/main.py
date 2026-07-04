@@ -9,7 +9,7 @@ from sentinel.cognee_client import CogneeClient, CogneeError
 from sentinel.config import load_settings
 from sentinel.ingest import process_report
 from sentinel.reviewer import build_review
-from sentinel.kiwi_cli import get_llm_client, ask_llm
+from sentinel.llm_client import get_llm_client, ask_llm
 
 app = FastAPI(title="Demo payments service")
 store = ChargeStore()
