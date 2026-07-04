@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { render, Box, Text } from '@claude-code-kit/ink-renderer'
+import { render, Box, Text, useInput, useApp } from '@claude-code-kit/ink-renderer'
 import { REPL, WelcomeScreen } from '@claude-code-kit/ui'
 import axios from 'axios'
 
@@ -33,11 +33,13 @@ type LoginState = {
 }
 
 function App() {
+  const { exit } = useApp()
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loginState, setLoginState] = useState<LoginState>({ step: 'idle' })
   const [envCredentials, setEnvCredentials] = useState<{ baseUrl: string, apiKey: string, tenantId: string } | null>(null)
+  const ctrlCPressedRef = React.useRef(false)
 
   useEffect(() => {
     async function checkAuth() {
@@ -67,6 +69,38 @@ function App() {
     }
     checkAuth()
   }, [])
+
+  useInput((input, key) => {
+    if (key.escape) {
+      if (loginState.step !== 'idle') {
+        setLoginState({ step: 'idle' })
+        setMessages(prev => [...prev, {
+          id: Math.random().toString(36).substring(7),
+          role: 'assistant',
+          content: 'Interactive configuration cancelled. Returned to main command line.'
+        }])
+        setIsLoading(false)
+      }
+    }
+
+    if (key.ctrl && input === 'c') {
+      if (ctrlCPressedRef.current) {
+        exit()
+      } else {
+        ctrlCPressedRef.current = true
+        setMessages(prev => [...prev, {
+          id: Math.random().toString(36).substring(7),
+          role: 'assistant',
+          content: 'Press Ctrl+C again to close the session.'
+        }])
+        setTimeout(() => {
+          ctrlCPressedRef.current = false
+        }, 3000)
+      }
+    } else {
+      ctrlCPressedRef.current = false
+    }
+  })
 
   const handleSubmit = useCallback(async (text: string) => {
     setIsLoading(true)
@@ -300,7 +334,7 @@ function App() {
           setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Enter Cognee Base URL:' }])
         }
       } else if (text.startsWith('/exit')) {
-        process.exit(0)
+        exit()
       } else if (text.startsWith('/help')) {
         const helpText = [
           'Available Commands:',
