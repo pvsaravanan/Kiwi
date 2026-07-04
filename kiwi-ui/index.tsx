@@ -447,8 +447,16 @@ function App() {
         }
 
         if (actionPayload) {
-          // Remove the temporary assistant thinking message
-          setMessages(prev => prev.filter(m => m.id !== assistantMsgId))
+          // Collapse the thinking block so it stays visible on screen, but do not delete it
+          setMessages(prev => prev.map(m => {
+            if (m.id === assistantMsgId && Array.isArray(m.content)) {
+              return {
+                ...m,
+                content: m.content.map(c => c.type === 'thinking' ? { ...c, collapsed: true } : c)
+              }
+            }
+            return m
+          }))
           
           const action = actionPayload.action
           const args = actionPayload.args || {}
