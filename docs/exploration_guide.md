@@ -39,7 +39,7 @@ Trace how a user action (e.g. running a test or query) flows through Kiwi:
 ### 1. Dynamic LLM Instantiation
 Kiwi dynamically resolves the active provider (Anthropic, OpenAI, or Gemini) and model directly from the persistent config or `.env` files:
 ```python
-# sentinel/kiwi_cli.py
+# sentinel/llm_client.py
 provider, client, model = get_llm_client()
 ```
 

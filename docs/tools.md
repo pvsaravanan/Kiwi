@@ -5,7 +5,7 @@ This document describes the core execution tools integrated into the Kiwi QA Har
 ---
 
 ## 1. Pytest Executable Tool
-**Location:** [sentinel/kiwi_cli.py](../sentinel/kiwi_cli.py) & [app/main.py](../app/main.py)
+**Location:** [sentinel/llm_client.py](../sentinel/llm_client.py) & [app/main.py](../app/main.py)
 
 Runs local test suites, monitors outcomes, and captures outputs.
 * **Execution**: Invokes `pytest` in a subprocess with JUnit XML serialization flags (`--junitxml=junit_report.xml`).
