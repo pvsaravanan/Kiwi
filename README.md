@@ -169,3 +169,4 @@ For in-depth developer orientation, refer to:
 * [Exploration Guide](docs/exploration_guide.md): Code orientation map and data pipeline flow.
 * [Subsystems Guide](docs/subsystems.md): Structural details of CLI, Backend, Memory, and Review engines.
 * [Tools Reference](docs/tools.md): Specs for Kiwi's execution modules.
+* [Command Reference](docs/commands.md): Details, functions, and examples for all REPL slash commands.
