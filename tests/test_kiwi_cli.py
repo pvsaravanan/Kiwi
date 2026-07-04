@@ -65,7 +65,7 @@ def test_kiwi_chat_query(mock_ask_llm, mock_get_llm, mock_client, mock_settings)
         return inputs.pop(0)
 
     mock_client.recall.return_value = [{"text": "observed customer billed twice"}]
-    mock_get_llm.return_value = ("gemini", MagicMock())
+    mock_get_llm.return_value = ("gemini", MagicMock(), "gemini-3.5-flash")
     mock_ask_llm.return_value = "Yes, due to retries."
 
     run_session(mock_client, mock_settings, input_func=mock_input)
@@ -73,3 +73,26 @@ def test_kiwi_chat_query(mock_ask_llm, mock_get_llm, mock_client, mock_settings)
     mock_client.recall.assert_any_call("Does the API charge twice?", dataset="kiwi-test")
     mock_ask_llm.assert_called_once()
     assert "observed customer billed twice" in mock_ask_llm.call_args[0][2]
+    assert mock_ask_llm.call_args[1].get("model") == "gemini-3.5-flash"
+
+
+@patch("sentinel.kiwi_cli.load_settings")
+@patch("sentinel.kiwi_cli.run_session")
+@patch("sentinel.kiwi_cli.CogneeClient")
+@patch("sentinel.setup_wizard.run_setup_wizard")
+def test_kiwi_cli_main_fallback_to_wizard(mock_run_setup_wizard, mock_cognee_client, mock_run_session, mock_load_settings):
+    mock_load_settings.side_effect = RuntimeError("Missing env var")
+    mock_run_setup_wizard.return_value = Settings(
+        base_url="https://wizard.cognee.ai",
+        api_key="wizard-key",
+        tenant_id="wizard-tenant",
+        dataset="wizard-dataset"
+    )
+    
+    from sentinel.kiwi_cli import main
+    main()
+    
+    mock_run_setup_wizard.assert_called_once()
+    mock_cognee_client.assert_called_once()
+    mock_run_session.assert_called_once()
+

@@ -244,7 +244,7 @@ def run_session(client, settings, input_func=input):
                 except CogneeError as exc:
                     console.print(f"[bold yellow][WARNING] Failed to retrieve context from memory: {exc}[/bold yellow]")
 
-            provider, llm = get_llm_client()
+            provider, llm, model = get_llm_client()
             if not llm:
                 console.print("[bold yellow][WARNING] No LLM configured. Outputting memory recall only.[/bold yellow]")
                 if context_str:
@@ -268,7 +268,7 @@ def run_session(client, settings, input_func=input):
             )
             
             with console.status(f"[bold cyan]Asking {provider.capitalize()}...[/bold cyan]"):
-                ans = ask_llm(provider, llm, prompt, system_instruction)
+                ans = ask_llm(provider, llm, prompt, system_instruction, model=model)
             console.print(Panel(Markdown(ans), title="Kiwi Answer", border_style="green"))
 
 
@@ -279,8 +279,14 @@ def main():
         settings = load_settings()
         client = CogneeClient(settings)
     except Exception as e:
-        print(f"[Kiwi Error] Failed to load settings: {e}")
-        sys.exit(1)
+        console.print(f"[bold yellow][WARNING] Failed to load settings: {e}[/bold yellow]")
+        try:
+            from sentinel.setup_wizard import run_setup_wizard
+            settings = run_setup_wizard()
+            client = CogneeClient(settings)
+        except Exception as wizard_err:
+            console.print(f"[bold red][Kiwi Error] Setup wizard failed: {wizard_err}[/bold red]")
+            sys.exit(1)
 
     run_session(client, settings)
 
