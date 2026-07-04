@@ -39,26 +39,29 @@ def get_llm_client():
             with open(state_file, "r") as f:
                 state = json.load(f)
             if state.get("is_logged_in"):
-                provider = state.get("llm_provider", "").lower()
+                provider = state.get("llm_provider", "").lower() or None
                 model = state.get("llm_model")
-                api_key = state.get("api_key")
+                # NOTE: state["api_key"] is Cognee's API key; LLM keys should come from env (or a dedicated field).
         except Exception:
             pass
 
-    if not provider:
-        anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
-        gemini_key = os.environ.get("GEMINI_API_KEY")
-        openai_key = os.environ.get("OPENAI_API_KEY")
-        if anthropic_key and anthropic_key != "your_anthropic_key_here":
-            provider = "anthropic"
-            api_key = anthropic_key
-        elif gemini_key and gemini_key != "your_gemini_key_here":
-            provider = "gemini"
-            api_key = gemini_key
-        elif openai_key and openai_key != "your_openai_key_here":
-            provider = "openai"
-            api_key = openai_key
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
 
+    if provider == "anthropic" and anthropic_key and anthropic_key != "your_anthropic_key_here":
+        api_key = anthropic_key
+    elif provider == "gemini" and gemini_key and gemini_key != "your_gemini_key_here":
+        api_key = gemini_key
+    elif provider == "openai" and openai_key and openai_key != "your_openai_key_here":
+        api_key = openai_key
+    elif not provider:
+        if anthropic_key and anthropic_key != "your_anthropic_key_here":
+            provider, api_key = "anthropic", anthropic_key
+        elif gemini_key and gemini_key != "your_gemini_key_here":
+            provider, api_key = "gemini", gemini_key
+        elif openai_key and openai_key != "your_openai_key_here":
+            provider, api_key = "openai", openai_key
     if not provider or not api_key:
         return None, None, None
 
