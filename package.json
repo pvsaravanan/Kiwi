@@ -1,0 +1,7 @@
+{
+  "name": "kiwi-workspace-root",
+  "private": true,
+  "scripts": {
+    "kiwi": "pnpm --silent --dir kiwi-ui start"
+  }
+}

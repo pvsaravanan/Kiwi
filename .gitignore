@@ -8,3 +8,5 @@ build/
 .superpowers/
 .venv/
 test-results.xml
+kiwi_session_state.json
+node_modules/
