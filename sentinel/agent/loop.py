@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Callable, Iterator
 
 from sentinel.agent.providers.base import ProviderAdapter
-from sentinel.agent.tools import TOOL_REGISTRY, ToolContext, ToolError
+from sentinel.agent.tools import ALL_TESTS_PASSED, TOOL_REGISTRY, ToolContext, ToolError
 from sentinel.agent.types import Message, ToolCall
 
 MAX_ITERATIONS = 10
@@ -12,7 +12,10 @@ SYSTEM_PROMPT = (
     "run_tests, read_file, search_code, edit_file, shell, recall, remember. "
     "Investigate before editing. When you believe the issue is fixed, call run_tests "
     "to verify, then respond with plain text summarizing what you found and changed. "
-    "Only call edit_file when you are confident in the fix."
+    "Only call edit_file when you are confident in the fix. "
+    "As soon as run_tests reports that all tests passed, stop immediately: do not make "
+    "further edits, run further commands, or re-verify -- a single passing run_tests "
+    "result is sufficient confirmation."
 )
 
 
@@ -75,6 +78,17 @@ def run_agent_loop(
 
             if call.name == "edit_file" and not result_text.startswith("Error"):
                 yield LoopEvent("edit_diff", {"id": call.id, "file": call.args.get("path"), "diff": result_text})
+
+            if call.name == "run_tests" and result_text == ALL_TESTS_PASSED:
+                # Stop deterministically on a green run_tests result rather than
+                # trusting the model to notice and stop on its own -- it may
+                # otherwise keep making further (unnecessary, or even harmful)
+                # tool calls after the fix is already confirmed.
+                yield LoopEvent("loop_done", {
+                    "success": True,
+                    "summary": "All tests passed after the applied changes.",
+                })
+                return
 
     yield LoopEvent("loop_done", {
         "success": False,

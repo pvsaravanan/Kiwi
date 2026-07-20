@@ -14,6 +14,12 @@ class ToolError(RuntimeError):
     pass
 
 
+# Exact string _run_tests returns on a clean pass. The loop orchestrator
+# matches on this verbatim to deterministically stop once tests are green,
+# rather than relying on the model to notice and stop on its own.
+ALL_TESTS_PASSED = "All tests passed."
+
+
 @dataclass
 class ToolContext:
     repo_root: Path
@@ -124,7 +130,7 @@ def _run_tests(ctx: ToolContext, args: dict) -> str:
         return f"pytest exited {result.returncode} but produced no JUnit report:\n{result.stdout[-2000:]}"
     ingest_results = process_report(str(junit_path), client=ctx.cognee_client, dataset=ctx.dataset)
     if not ingest_results:
-        return "All tests passed."
+        return ALL_TESTS_PASSED
     lines = [f"{len(ingest_results)} test(s) failed:"]
     for r in ingest_results:
         lines.append(f"- {r.failure.test_name}: {r.failure.error_message}")

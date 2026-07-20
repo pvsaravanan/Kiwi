@@ -140,6 +140,33 @@ def test_loop_unrecognized_decision_is_treated_as_denial(tmp_path):
     assert events[-1].data["success"] is True
 
 
+def test_loop_stops_immediately_after_run_tests_reports_all_passed(tmp_path, monkeypatch):
+    import subprocess as sp
+
+    (tmp_path / "junit_report.xml").write_text("<testsuite></testsuite>", encoding="utf-8")
+
+    def fake_run(*args, **kwargs):
+        return sp.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr("sentinel.agent.tools.subprocess.run", fake_run)
+
+    call = ToolCall(id="c1", name="run_tests", args={})
+    # A second scripted response the loop must never reach if it stops deterministically.
+    provider = FakeProvider([
+        AgentResponse(tool_calls=[call]),
+        AgentResponse(tool_calls=[ToolCall(id="c2", name="shell", args={"command": "ls"})]),
+    ])
+
+    events = list(run_agent_loop(
+        "fix and verify", provider, make_ctx(tmp_path), request_approval=lambda c: "allow",
+    ))
+
+    assert provider.calls == 1
+    assert events[-1].type == "loop_done"
+    assert events[-1].data["success"] is True
+    assert not any(e.type == "tool_call" and e.data["name"] == "shell" for e in events)
+
+
 def test_loop_tool_error_is_fed_back_as_error_result(tmp_path):
     call = ToolCall(id="c1", name="read_file", args={"path": "missing.py"})
     provider = FakeProvider([
