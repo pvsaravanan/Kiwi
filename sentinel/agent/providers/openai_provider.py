@@ -16,9 +16,10 @@ class OpenAIAdapter:
         ]
         openai_messages = [{"role": "system", "content": system}]
         openai_messages += [self._to_openai_message(m) for m in messages]
-        response = self.client.chat.completions.create(
-            model=self.model, messages=openai_messages, tools=openai_tools,
-        )
+        kwargs = {"model": self.model, "messages": openai_messages}
+        if openai_tools:
+            kwargs["tools"] = openai_tools
+        response = self.client.chat.completions.create(**kwargs)
         message = response.choices[0].message
         raw_tool_calls = message.tool_calls or []
         if raw_tool_calls:
