@@ -134,21 +134,23 @@ Kiwi currently depends on Cognee Cloud (paid, `X-Api-Key`/`X-Tenant-Id` auth). C
 ## Getting Started
 
 ### 1. Prerequisites
-* Python 3.10+
+* Python 3.12+
 * Node.js & pnpm
 * uv (Fast Python package manager)
 
 ### 2. Configuration Setup
-Create a `.env.local` or `.env` in the root directory:
+Copy `.env.example` to `.env` (or `.env.local`) and fill in real values:
 ```env
-COGNEE_BASE_URL=https://<your-tenant>.cognee.ai
-COGNEE_API_KEY=<your-api-key>
-COGNEE_TENANT_ID=<your-tenant-id>
+COGNEE_BASE_URL=https://tenant-<your-tenant-id>.aws.cognee.ai
+COGNEE_API_KEY=your_api_key_here
+COGNEE_TENANT_ID=your-tenant-id
+SENTINEL_DATASET=sentinel
 
 # LLM Keys
-ANTHROPIC_API_KEY=<key>
-GEMINI_API_KEY=<key>
-OPENAI_API_KEY=<key>
+ANTHROPIC_API_KEY=your_anthropic_key_here
+GEMINI_API_KEY=your_gemini_key_here
+OPENAI_API_KEY=your_openai_key_here
+GITHUB_TOKEN=optional_for_pr_comments
 ```
 
 ### 3. Install Frontend Dependencies
@@ -179,6 +181,7 @@ Use the silent launcher command for your shell:
 ## Codebase Documentation
 
 For in-depth developer orientation, refer to:
+* [CLAUDE.md](CLAUDE.md): Commands and architecture notes for AI coding agents working in this repo.
 * [Exploration Guide](docs/exploration_guide.md): Code orientation map and data pipeline flow.
 * [Subsystems Guide](docs/subsystems.md): Structural details of CLI, Backend, Memory, and Review engines.
 * [Tools Reference](docs/tools.md): Specs for Kiwi's execution modules.
