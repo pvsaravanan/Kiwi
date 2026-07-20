@@ -58,6 +58,21 @@ def test_search_code_invalid_regex_raises_tool_error(tmp_path):
         TOOL_REGISTRY["search_code"].run(ctx, {"pattern": "("})
 
 
+def test_search_code_glob_cannot_escape_repo_root(tmp_path):
+    outside = tmp_path.parent / f"outside_{tmp_path.name}.txt"
+    outside.write_text("TOTALLY_SECRET_MARKER\n", encoding="utf-8")
+    try:
+        (tmp_path / "a.py").write_text("nothing interesting\n", encoding="utf-8")
+        ctx = make_ctx(tmp_path)
+        out = TOOL_REGISTRY["search_code"].run(
+            ctx, {"pattern": "TOTALLY_SECRET_MARKER", "glob": "../*.txt"}
+        )
+        assert "TOTALLY_SECRET_MARKER" not in out
+        assert out == "No matches found."
+    finally:
+        outside.unlink(missing_ok=True)
+
+
 def test_read_file_and_search_code_are_not_approval_gated():
     assert TOOL_REGISTRY["read_file"].requires_approval is False
     assert TOOL_REGISTRY["search_code"].requires_approval is False

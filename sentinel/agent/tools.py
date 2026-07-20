@@ -25,11 +25,17 @@ class ToolSpec:
     run: Callable[["ToolContext", dict], str]
 
 
+def _is_contained(repo_root: Path, candidate: Path) -> bool:
+    try:
+        candidate.resolve().relative_to(repo_root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
 def _safe_path(repo_root: Path, path: str) -> Path:
     candidate = (repo_root / path).resolve()
-    try:
-        candidate.relative_to(repo_root.resolve())
-    except ValueError:
+    if not _is_contained(repo_root, candidate):
         raise ToolError(f"Path escapes repo root: {path}")
     return candidate
 
@@ -53,6 +59,8 @@ def _search_code(ctx: ToolContext, args: dict) -> str:
     glob_pattern = args.get("glob") or "**/*.py"
     matches: list[str] = []
     for file_path in sorted(ctx.repo_root.glob(glob_pattern)):
+        if not _is_contained(ctx.repo_root, file_path):
+            continue
         if not file_path.is_file() or file_path.stat().st_size > 1_000_000:
             continue
         try:
