@@ -23,7 +23,7 @@ This document describes all interactive slash (`/`) commands available in the Ki
 | [`/clear`](#/clear) | Clears the active command screen logs | `/clear` |
 | [`/help`](#/help) | Lists all available commands and their summaries | `/help` |
 | [`/exit`](#/exit) | Safely shuts down the Kiwi CLI REPL | `/exit` |
-| `/fix [path]` *(planned)* | Runs the multi-step agentic loop to autonomously diagnose and fix a failing test | `/fix tests/test_login.py` |
+| [`/fix [path]`](#/fix-path) | Runs the multi-step agentic loop to autonomously diagnose and fix a failing test | `/fix tests/test_login.py` |
 
 ---
 
@@ -192,7 +192,7 @@ This document describes all interactive slash (`/`) commands available in the Ki
   /exit
   ```
 
-### `/fix [path]` *(planned — not yet implemented)*
+### `/fix [path]`
 * **Purpose**: Autonomously diagnoses and fixes a failing test via a multi-step agentic loop, instead of just reporting on it.
 * **Function**: Runs a run → inspect → search → edit → rerun loop (up to a fixed step budget) against the target test, using a curated tool set (`run_tests`, `read_file`, `search_code`, `edit_file`, `shell`, `recall`, `remember`). File edits and shell commands prompt for per-action approval before running. Also reachable via natural language (e.g. "fix the failing payment test"), which routes to the same loop. See [Agentic QA Harness design](superpowers/specs/2026-07-20-agentic-qa-harness-design.md) for the full spec.
 * **Example**:

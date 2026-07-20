@@ -32,8 +32,8 @@ Compiles code changes, failure logs, and historical resolutions, sending them to
 
 ---
 
-## 4. Agentic Tool Registry *(planned — not yet implemented)*
-**Location (planned):** [sentinel/agent/tools.py](superpowers/specs/2026-07-20-agentic-qa-harness-design.md)
+## 4. Agentic Tool Registry
+**Location:** [sentinel/agent/tools.py](../sentinel/agent/tools.py)
 
 The tool set exposed to the model inside the multi-step `/fix` agentic loop (see [Agentic QA Harness design](superpowers/specs/2026-07-20-agentic-qa-harness-design.md)):
 * **run_tests(path?)**: auto-approved; wraps the existing Pytest Executable Tool and Cognee ingest path, returns a structured pass/fail summary.

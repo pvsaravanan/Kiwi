@@ -13,7 +13,7 @@ This guide helps you navigate and study the Kiwi codebase, showing how the UI, C
 | **Memory Client** | Client wrapper around Cognee graph database (`remember`, `recall`) | [sentinel/cognee_client.py](../sentinel/cognee_client.py) |
 | **Review Engine** | Prompt generator that builds and lints grounding reviews using LLMs | [sentinel/reviewer.py](../sentinel/reviewer.py) |
 | **Dynamic Configuration**| Priority-based env loader (.env.local -> .env) and state files | [sentinel/config.py](../sentinel/config.py) |
-| **Agentic QA Harness** *(planned)* | Multi-step tool-use loop (run → inspect → search → edit → rerun) for autonomously fixing failing tests | `sentinel/agent/` — see [design doc](superpowers/specs/2026-07-20-agentic-qa-harness-design.md) |
+| **Agentic QA Harness** | Multi-step tool-use loop (run → inspect → search → edit → rerun) for autonomously fixing failing tests | [sentinel/agent/](../sentinel/agent/) |
 
 ---
 
@@ -54,5 +54,5 @@ for f in env_files:
     load_dotenv(f)
 ```
 
-### 3. Multi-Step Agentic Loop *(planned)*
-`/kiwi/query` today is one-shot: one LLM call in, one action or text reply out. The planned `/fix` agentic harness replaces that with an iterate-until-done loop — call the model with tools, execute any tool calls (with approval gates on risky ones), feed results back, repeat up to a fixed step budget. See [Agentic QA Harness design](superpowers/specs/2026-07-20-agentic-qa-harness-design.md) for the full architecture.
+### 3. Multi-Step Agentic Loop
+The `/fix` agentic harness runs an iterate-until-done loop — call the model with tools, execute any tool calls (with approval gates on risky ones), feed results back, repeat up to a fixed step budget. See [Agentic QA Harness design](superpowers/specs/2026-07-20-agentic-qa-harness-design.md) for the full architecture.

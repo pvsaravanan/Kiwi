@@ -44,8 +44,8 @@ Ensures generated reviews are factual and grounded.
 
 ---
 
-## 5. Agentic QA Harness Subsystem *(planned — not yet implemented)*
-**Location (planned):** `sentinel/agent/`
+## 5. Agentic QA Harness Subsystem
+**Location:** [sentinel/agent/](../sentinel/agent/)
 
 Turns Kiwi from a one-shot NL-to-single-action translator into a real multi-step tool-use loop — run a test, inspect the failure, search the codebase, edit, rerun, repeat — the way Claude Code works for coding tasks, but scoped to QA. Full design: [Agentic QA Harness design](superpowers/specs/2026-07-20-agentic-qa-harness-design.md).
 * **Loop orchestrator** (`sentinel/agent/loop.py`): iterates provider tool calls until the model returns final text or a fixed iteration budget (10) is hit.
