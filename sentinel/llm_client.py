@@ -15,20 +15,14 @@ except ImportError:
 
 
 def get_llm_client():
-    import json
-    state_file = "kiwi_session_state.json"
+    from sentinel.session_state import load_state
     provider = None
     model = None
     api_key = None
-    if os.path.exists(state_file):
-        try:
-            with open(state_file, "r") as f:
-                state = json.load(f)
-            if state.get("is_logged_in"):
-                provider = state.get("llm_provider", "").lower() or None
-                model = state.get("llm_model")
-        except Exception:
-            pass
+    state = load_state()
+    if state.get("is_logged_in"):
+        provider = state.get("llm_provider", "").lower() or None
+        model = state.get("llm_model")
 
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
     gemini_key = os.environ.get("GEMINI_API_KEY")

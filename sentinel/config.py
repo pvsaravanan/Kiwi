@@ -37,21 +37,16 @@ def _require(name: str) -> str:
 
 
 def load_settings() -> Settings:
-    import json
-    state_file = "kiwi_session_state.json"
-    if "PYTEST_CURRENT_TEST" not in os.environ and os.path.exists(state_file):
-        try:
-            with open(state_file, "r") as f:
-                state = json.load(f)
-            if state.get("is_logged_in") and state.get("base_url") and state.get("api_key") and state.get("tenant_id"):
-                return Settings(
-                    base_url=state["base_url"].rstrip("/"),
-                    api_key=state["api_key"],
-                    tenant_id=state["tenant_id"],
-                    dataset=os.environ.get("SENTINEL_DATASET", "sentinel"),
-                )
-        except Exception:
-            pass
+    if "PYTEST_CURRENT_TEST" not in os.environ:
+        from sentinel.session_state import load_state
+        state = load_state()
+        if state.get("is_logged_in") and state.get("base_url") and state.get("api_key") and state.get("tenant_id"):
+            return Settings(
+                base_url=state["base_url"].rstrip("/"),
+                api_key=state["api_key"],
+                tenant_id=state["tenant_id"],
+                dataset=os.environ.get("SENTINEL_DATASET", "sentinel"),
+            )
 
     return Settings(
         base_url=_require("COGNEE_BASE_URL").rstrip("/"),

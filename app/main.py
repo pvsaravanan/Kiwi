@@ -11,37 +11,10 @@ from sentinel.config import load_settings
 from sentinel.ingest import process_report
 from sentinel.reviewer import build_review
 from sentinel.llm_client import get_llm_client, ask_llm
+from sentinel.session_state import load_state, save_state
 
 app = FastAPI(title="Demo payments service")
 store = ChargeStore()
-
-STATE_FILE = "kiwi_session_state.json"
-
-
-def load_state() -> dict:
-    if not os.path.exists(STATE_FILE):
-        return {
-            "last_failures": [],
-            "failure_counts": {},
-            "session_log": []
-        }
-    try:
-        with open(STATE_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return {
-            "last_failures": [],
-            "failure_counts": {},
-            "session_log": []
-        }
-
-
-def save_state(state: dict):
-    try:
-        with open(STATE_FILE, "w") as f:
-            json.dump(state, f, indent=2)
-    except Exception:
-        pass
 
 
 class RememberReq(BaseModel):

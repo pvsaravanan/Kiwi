@@ -13,6 +13,7 @@ dependencies = [
     "pyvis>=0.3.2",
     "google-genai>=0.1.1",
     "rich>=13.7.0",
+    "cryptography>=42.0",
 ]
 
 
