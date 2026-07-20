@@ -2,7 +2,7 @@ import os
 from unittest.mock import MagicMock, patch
 import pytest
 
-from sentinel.llm_client import get_llm_client, ask_llm
+from sentinel.llm_client import ask_llm, get_llm_client, stream_llm, validate_llm_credentials
 
 @patch("sentinel.session_state.load_state")
 def test_get_llm_client_no_state_and_no_env(mock_load_state):
@@ -49,3 +49,41 @@ def test_validate_llm_credentials_failure(mock_get_client):
     valid, err = validate_llm_credentials("gemini", "gemini-3.5-flash")
     assert valid is False
     assert "API key invalid" in err
+
+
+def test_ask_llm_openai_uses_max_completion_tokens_not_max_tokens():
+    client = MagicMock()
+    client.chat.completions.create.return_value.choices = [
+        MagicMock(message=MagicMock(content="hi"))
+    ]
+
+    ask_llm("openai", client, "hello", model="gpt-5.4-mini")
+
+    kwargs = client.chat.completions.create.call_args.kwargs
+    assert "max_tokens" not in kwargs
+    assert kwargs["max_completion_tokens"] == 1024
+
+
+def test_stream_llm_openai_uses_max_completion_tokens_not_max_tokens():
+    client = MagicMock()
+    client.chat.completions.create.return_value = []
+
+    list(stream_llm("openai", client, "hello", model="gpt-5.4-mini"))
+
+    kwargs = client.chat.completions.create.call_args.kwargs
+    assert "max_tokens" not in kwargs
+    assert kwargs["max_completion_tokens"] == 1024
+
+
+@patch("sentinel.llm_client.get_llm_client")
+def test_validate_llm_credentials_openai_uses_max_completion_tokens(mock_get_client):
+    mock_llm_client = MagicMock()
+    mock_get_client.return_value = ("openai", mock_llm_client, "gpt-5.4-mini")
+
+    valid, err = validate_llm_credentials("openai", "gpt-5.4-mini")
+
+    assert valid is True
+    assert err == ""
+    kwargs = mock_llm_client.chat.completions.create.call_args.kwargs
+    assert "max_tokens" not in kwargs
+    assert kwargs["max_completion_tokens"] == 5

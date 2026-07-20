@@ -90,7 +90,7 @@ def ask_llm(provider, client, prompt: str, system_instruction: str = "You are Ki
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=1024
+                max_completion_tokens=1024
             )
             return resp.choices[0].message.content or ""
         except Exception as exc:
@@ -134,7 +134,7 @@ def stream_llm(provider, client, prompt: str, system_instruction: str = "You are
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=1024,
+                max_completion_tokens=1024,
                 stream=True
             )
             for chunk in resp:
@@ -169,7 +169,7 @@ def validate_llm_credentials(provider: str, model: str) -> tuple[bool, str]:
             client.chat.completions.create(
                 model=m,
                 messages=[{"role": "user", "content": "ping"}],
-                max_tokens=5
+                max_completion_tokens=5
             )
         return True, ""
     except Exception as e:
