@@ -29,3 +29,15 @@ Exposes memory graph creation, indexing, and vector similarity querying to the a
 Compiles code changes, failure logs, and historical resolutions, sending them to dynamic model endpoints (Claude, GPT, or Gemini) to build anchored feedback.
 * **Input**: triggers on JUnit XML generation after test crashes.
 * **Grounding Validation**: Filters output using sentence n-gram verification against recalled incident logs to prevent AI hallucination.
+
+---
+
+## 4. Agentic Tool Registry *(planned — not yet implemented)*
+**Location (planned):** [sentinel/agent/tools.py](superpowers/specs/2026-07-20-agentic-qa-harness-design.md)
+
+The tool set exposed to the model inside the multi-step `/fix` agentic loop (see [Agentic QA Harness design](superpowers/specs/2026-07-20-agentic-qa-harness-design.md)):
+* **run_tests(path?)**: auto-approved; wraps the existing Pytest Executable Tool and Cognee ingest path, returns a structured pass/fail summary.
+* **read_file / search_code**: auto-approved, read-only, sandboxed to the repo root.
+* **edit_file(path, old_string, new_string)**: requires human approval; exact-match replace, returns a diff.
+* **shell(command)**: requires human approval; generic escape hatch with a timeout and truncated output.
+* **recall / remember**: auto-approved wrappers over the Cognee Storage Client Tool for mid-loop memory queries.

@@ -41,3 +41,14 @@ Connects the agent to a Cognee graph database.
 Ensures generated reviews are factual and grounded.
 * **get_diff()**: Queries git history for local repository code modifications.
 * **ground_review()**: Validates model output using n-gram grounding checks against recalled history to prevent hallucinations.
+
+---
+
+## 5. Agentic QA Harness Subsystem *(planned — not yet implemented)*
+**Location (planned):** `sentinel/agent/`
+
+Turns Kiwi from a one-shot NL-to-single-action translator into a real multi-step tool-use loop — run a test, inspect the failure, search the codebase, edit, rerun, repeat — the way Claude Code works for coding tasks, but scoped to QA. Full design: [Agentic QA Harness design](superpowers/specs/2026-07-20-agentic-qa-harness-design.md).
+* **Loop orchestrator** (`sentinel/agent/loop.py`): iterates provider tool calls until the model returns final text or a fixed iteration budget (10) is hit.
+* **Tool registry** (`sentinel/agent/tools.py`): curated tools (`run_tests`, `read_file`, `search_code`, `edit_file`, `shell`, `recall`, `remember`); `edit_file` and `shell` require per-action human approval.
+* **Provider adapters** (`sentinel/agent/providers/`): normalize Anthropic/OpenAI/Gemini native tool-calling into one shared interface.
+* **Entry points**: dedicated `/fix [path]` command, and a new `fix` action in the `/kiwi/query` NL router so plain-English requests reach the same loop.

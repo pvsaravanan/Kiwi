@@ -115,6 +115,13 @@ Translates JUnit XML outputs and git changes into grounded developer reviews via
 | `/session` | Outputs logs for the active CLI session. |
 | `/forget` | Explicitly clears datasets from Cognee memory. |
 | `/exit` | Safely quits the Kiwi CLI. |
+| `/fix [path]` *(planned)* | Runs a multi-step agentic loop to autonomously diagnose and fix a failing test. |
+
+---
+
+## Roadmap: Agentic QA Harness
+
+Kiwi is moving from a one-shot NL-to-single-action assistant toward a real agentic harness for QA — the same run → inspect → search → edit → rerun loop Claude Code uses for coding tasks, but scoped to diagnosing and fixing failing tests. Autonomous file edits will be gated behind per-action human approval, with a fixed step budget so the loop always terminates with a report. See the full design at [docs/superpowers/specs/2026-07-20-agentic-qa-harness-design.md](docs/superpowers/specs/2026-07-20-agentic-qa-harness-design.md).
 
 ---
 
