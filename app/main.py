@@ -4,8 +4,12 @@ from pydantic import BaseModel
 import os
 import subprocess
 import json
+from pathlib import Path
 
+from app.agent_bridge import RUNS, AgentRun
 from app.webhook_service import ChargeStore, process_webhook
+from sentinel.agent.providers import build_adapter
+from sentinel.agent.tools import ToolContext
 from sentinel.cognee_client import CogneeClient, CogneeError
 from sentinel.config import load_settings
 from sentinel.ingest import process_report
@@ -48,6 +52,17 @@ class ResolveReq(BaseModel):
 
 class FlakyReq(BaseModel):
     test_name: str = ""
+
+
+class AgentStartReq(BaseModel):
+    goal: str = ""
+    path: str = ""
+
+
+class AgentApproveReq(BaseModel):
+    loop_id: str
+    tool_call_id: str
+    decision: str
 
 
 @app.post("/webhook")
@@ -336,3 +351,42 @@ def kiwi_login(req: LoginDetails):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/kiwi/agent/start")
+def agent_start(req: AgentStartReq):
+    settings = load_settings()
+    client = CogneeClient(settings)
+    provider_name, llm, model = get_llm_client()
+    if not llm:
+        raise HTTPException(status_code=400, detail="No LLM configured. Run /login first.")
+
+    adapter = build_adapter(provider_name, llm, model)
+    ctx = ToolContext(repo_root=Path.cwd(), cognee_client=client, dataset=settings.dataset)
+    goal = f"Fix the failing test at {req.path}" if req.path else req.goal
+    run = AgentRun(adapter, ctx, goal)
+    RUNS[run.loop_id] = run
+    run.start()
+
+    def generator():
+        yield json.dumps({"type": "loop_start", "loop_id": run.loop_id}) + "\n"
+        try:
+            while True:
+                event = run.next_event(timeout=120)
+                if event is None:
+                    break
+                yield json.dumps({"type": event.type, **event.data}) + "\n"
+                if event.type == "loop_done":
+                    break
+        finally:
+            RUNS.pop(run.loop_id, None)
+
+    return StreamingResponse(generator(), media_type="text/event-stream")
+
+
+@app.post("/kiwi/agent/approve")
+def agent_approve(req: AgentApproveReq):
+    run = RUNS.get(req.loop_id)
+    if not run or not run.resolve_approval(req.tool_call_id, req.decision):
+        raise HTTPException(status_code=404, detail="No pending approval for that tool_call_id.")
+    return {"status": "ok"}
