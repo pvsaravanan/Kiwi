@@ -7,6 +7,7 @@ from typing import Callable
 
 from sentinel.agent.types import ToolSchema
 from sentinel.cognee_client import CogneeClient
+from sentinel.ingest import process_report
 
 
 class ToolError(RuntimeError):
@@ -112,6 +113,38 @@ def _shell(ctx: ToolContext, args: dict) -> str:
     return f"exit code {result.returncode}\n{output}"
 
 
+def _run_tests(ctx: ToolContext, args: dict) -> str:
+    path = (args.get("path") or "").strip()
+    cmd = ["uv", "run", "pytest", "--junitxml=junit_report.xml"]
+    if path:
+        cmd.append(path)
+    result = subprocess.run(cmd, cwd=ctx.repo_root, capture_output=True, text=True, timeout=300)
+    junit_path = ctx.repo_root / "junit_report.xml"
+    if not junit_path.exists():
+        return f"pytest exited {result.returncode} but produced no JUnit report:\n{result.stdout[-2000:]}"
+    ingest_results = process_report(str(junit_path), client=ctx.cognee_client, dataset=ctx.dataset)
+    if not ingest_results:
+        return "All tests passed."
+    lines = [f"{len(ingest_results)} test(s) failed:"]
+    for r in ingest_results:
+        lines.append(f"- {r.failure.test_name}: {r.failure.error_message}")
+        if r.matched and r.history:
+            lines.append(f"  prior history: {r.history}")
+    return "\n".join(lines)
+
+
+def _recall(ctx: ToolContext, args: dict) -> str:
+    hits = ctx.cognee_client.recall(args["query"], dataset=ctx.dataset)
+    if not hits:
+        return "No matching memories found."
+    return "\n".join(f"- {h.get('text')}" for h in hits)
+
+
+def _remember(ctx: ToolContext, args: dict) -> str:
+    ctx.cognee_client.remember(args["text"], dataset=ctx.dataset)
+    return "Stored in memory."
+
+
 TOOL_REGISTRY: dict[str, ToolSpec] = {
     "read_file": ToolSpec(
         schema=ToolSchema(
@@ -177,5 +210,46 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
         ),
         requires_approval=True,
         run=_shell,
+    ),
+    "run_tests": ToolSpec(
+        schema=ToolSchema(
+            name="run_tests",
+            description="Run pytest (optionally scoped to a path) and get a structured pass/fail summary with recalled history for any failures.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Repo-relative test path, or empty to run the full suite."},
+                },
+                "required": [],
+            },
+        ),
+        requires_approval=False,
+        run=_run_tests,
+    ),
+    "recall": ToolSpec(
+        schema=ToolSchema(
+            name="recall",
+            description="Query Cognee memory for prior incidents similar to a description.",
+            parameters={
+                "type": "object",
+                "properties": {"query": {"type": "string", "description": "Description of the failure to search for."}},
+                "required": ["query"],
+            },
+        ),
+        requires_approval=False,
+        run=_recall,
+    ),
+    "remember": ToolSpec(
+        schema=ToolSchema(
+            name="remember",
+            description="Store a fact or resolution summary in Cognee memory.",
+            parameters={
+                "type": "object",
+                "properties": {"text": {"type": "string", "description": "Fact or resolution to store."}},
+                "required": ["text"],
+            },
+        ),
+        requires_approval=False,
+        run=_remember,
     ),
 }

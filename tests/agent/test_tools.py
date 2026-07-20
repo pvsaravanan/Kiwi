@@ -129,3 +129,64 @@ def test_shell_times_out_gracefully(tmp_path, monkeypatch):
 def test_edit_file_and_shell_require_approval():
     assert TOOL_REGISTRY["edit_file"].requires_approval is True
     assert TOOL_REGISTRY["shell"].requires_approval is True
+
+
+def test_run_tests_reports_all_passed_when_no_junit_report(tmp_path, monkeypatch):
+    import subprocess as sp
+
+    def fake_run(*args, **kwargs):
+        return sp.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr("sentinel.agent.tools.subprocess.run", fake_run)
+    ctx = make_ctx(tmp_path)
+    out = TOOL_REGISTRY["run_tests"].run(ctx, {})
+    assert "no JUnit report" in out or "All tests passed" in out
+
+
+def test_run_tests_summarizes_failures_from_junit_report(tmp_path, monkeypatch):
+    import subprocess as sp
+
+    junit_xml = (
+        '<testsuite><testcase name="test_x" classname="tests.test_x">'
+        '<failure message="boom">trace</failure></testcase></testsuite>'
+    )
+    (tmp_path / "junit_report.xml").write_text(junit_xml, encoding="utf-8")
+
+    def fake_run(*args, **kwargs):
+        return sp.CompletedProcess(args=args, returncode=1, stdout="", stderr="")
+
+    monkeypatch.setattr("sentinel.agent.tools.subprocess.run", fake_run)
+    ctx = make_ctx(tmp_path)
+    ctx.cognee_client.recall.return_value = []
+    out = TOOL_REGISTRY["run_tests"].run(ctx, {"path": "tests/test_x.py"})
+    assert "test_x" in out
+    assert "boom" in out
+    ctx.cognee_client.remember.assert_called_once()
+
+
+def test_recall_formats_hits(tmp_path):
+    ctx = make_ctx(tmp_path)
+    ctx.cognee_client.recall.return_value = [{"text": "prior incident"}]
+    out = TOOL_REGISTRY["recall"].run(ctx, {"query": "flaky login"})
+    assert out == "- prior incident"
+    ctx.cognee_client.recall.assert_called_once_with("flaky login", dataset="sentinel")
+
+
+def test_recall_no_hits_returns_message(tmp_path):
+    ctx = make_ctx(tmp_path)
+    ctx.cognee_client.recall.return_value = []
+    out = TOOL_REGISTRY["recall"].run(ctx, {"query": "flaky login"})
+    assert out == "No matching memories found."
+
+
+def test_remember_delegates_to_client(tmp_path):
+    ctx = make_ctx(tmp_path)
+    out = TOOL_REGISTRY["remember"].run(ctx, {"text": "fixed by adding retry"})
+    ctx.cognee_client.remember.assert_called_once_with("fixed by adding retry", dataset="sentinel")
+    assert out == "Stored in memory."
+
+
+def test_run_tests_recall_remember_are_not_approval_gated():
+    assert TOOL_REGISTRY["run_tests"].requires_approval is False
+    assert TOOL_REGISTRY["recall"].requires_approval is False
+    assert TOOL_REGISTRY["remember"].requires_approval is False
