@@ -164,6 +164,7 @@ def kiwi_query(req: QueryReq):
                 "9. 'history': List failure timeline logs for a specific test. Args: 'test_name' (string).\n"
                 "10. 'session': Show active session logs.\n"
                 "11. 'help': Show the list of available commands.\n"
+                "12. 'fix': Autonomously diagnose and fix a failing test via a multi-step agent loop. Args: 'path' (string, path to the failing test, optional).\n"
                 "\n"
                 "Format for actions (strict JSON):\n"
                 '{"action": "<action_name>", "args": { ... }}\n'

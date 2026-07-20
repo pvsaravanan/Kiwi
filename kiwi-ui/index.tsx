@@ -40,6 +40,7 @@ function App() {
   const [loginState, setLoginState] = useState<LoginState>({ step: 'idle' })
   const [envCredentials, setEnvCredentials] = useState<{ baseUrl: string, apiKey: string, tenantId: string } | null>(null)
   const ctrlCPressedRef = React.useRef(false)
+  const pendingApprovalRef = React.useRef<((input: string) => void) | null>(null)
 
   useEffect(() => {
     async function checkAuth() {
@@ -102,7 +103,99 @@ function App() {
     }
   })
 
+  const appendBlock = useCallback((assistantMsgId: string, block: any) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id === assistantMsgId && Array.isArray(m.content)) {
+        return { ...m, content: [...m.content, block] }
+      }
+      return m
+    }))
+  }, [])
+
+  const promptApproval = useCallback((name: string, args: any): Promise<string> => {
+    return new Promise(resolve => {
+      setMessages(prev => [...prev, {
+        id: Math.random().toString(36).substring(7),
+        role: 'assistant',
+        content: `Approve ${name}(${JSON.stringify(args)})? [y]es / [n]o / [a]llow rest of run`
+      }])
+      pendingApprovalRef.current = (input: string) => {
+        const v = input.trim().toLowerCase()
+        if (v === 'y' || v === 'yes') resolve('allow')
+        else if (v === 'a' || v === 'allow') resolve('allow_rest_of_loop')
+        else resolve('deny')
+        pendingApprovalRef.current = null
+      }
+    })
+  }, [])
+
+  const runAgentLoop = useCallback(async (
+    payload: { path?: string, goal?: string },
+    assistantMsgId: string
+  ) => {
+    const assistantMsg: Message = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: [{ type: 'thinking', text: 'Starting agent loop...', collapsed: false }]
+    }
+    setMessages(prev => [...prev, assistantMsg])
+
+    let loopId = ''
+    const response = await fetch(`${BACKEND_URL}/kiwi/agent/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({ detail: response.statusText }))
+      setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: `Agent error: ${detail.detail}` }])
+      return
+    }
+
+    const reader = response.body?.getReader()
+    const decoder = new TextDecoder()
+    if (!reader) return
+    let buffer = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        if (!line.trim()) continue
+        const event = JSON.parse(line)
+        if (event.type === 'loop_start') {
+          loopId = event.loop_id
+        } else if (event.type === 'thinking') {
+          appendBlock(assistantMsgId, { type: 'thinking', text: event.text, collapsed: false })
+        } else if (event.type === 'tool_call') {
+          appendBlock(assistantMsgId, {
+            type: 'tool_call', id: event.id, name: event.name, args: event.args,
+            needsApproval: event.needs_approval, collapsed: false
+          })
+          if (event.needs_approval) {
+            const decision = await promptApproval(event.name, event.args)
+            await axios.post(`${BACKEND_URL}/kiwi/agent/approve`, {
+              loop_id: loopId, tool_call_id: event.id, decision
+            })
+          }
+        } else if (event.type === 'tool_result') {
+          appendBlock(assistantMsgId, { type: 'tool_result', id: event.id, output: event.output })
+        } else if (event.type === 'edit_diff') {
+          appendBlock(assistantMsgId, { type: 'edit_diff', id: event.id, file: event.file, diff: event.diff })
+        } else if (event.type === 'loop_done') {
+          appendBlock(assistantMsgId, { type: 'text', text: event.summary })
+        }
+      }
+    }
+  }, [])
+
   const handleSubmit = useCallback(async (text: string, silent: boolean = false) => {
+    if (pendingApprovalRef.current) {
+      pendingApprovalRef.current(text)
+      return
+    }
     setIsLoading(true)
     const userMsgId = Math.random().toString(36).substring(7)
     const userMsg: Message = { id: userMsgId, role: 'user', content: text }
@@ -264,6 +357,9 @@ function App() {
           const resp = await axios.post(`${BACKEND_URL}/kiwi/resolve`, { summary })
           setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: `Stored resolution for "${resp.data.test_name}": ${summary}` }])
         }
+      } else if (text.startsWith('/fix')) {
+        const testPath = text.substring(4).trim()
+        await runAgentLoop(testPath ? { path: testPath } : { goal: 'Fix the currently failing tests.' }, assistantMsgId)
       } else if (text.startsWith('/flaky')) {
         const testName = text.substring(6).trim()
         const resp = await axios.post(`${BACKEND_URL}/kiwi/flaky`, { test_name: testName })
@@ -349,6 +445,7 @@ function App() {
           '  /remember <text>        Store manual context/incident details',
           '  /recall <query>         Query memory for similar past issues',
           '  /resolve <summary>      Log the fix for the last failing test in context',
+          '  /fix [path]             Autonomously diagnose and fix a failing test',
           '  /flaky [test_name]      Show flaky tests counts or target test history',
           '  /history <test_name>    List all failure timeline logs for a specific test',
           '  /session                Show loaded memory interactions from this session',
@@ -486,6 +583,8 @@ function App() {
             cmd += ` ${args.test_name}`
           } else if (action === 'history' && args.test_name) {
             cmd += ` ${args.test_name}`
+          } else if (action === 'fix' && args.path) {
+            cmd += ` ${args.path}`
           }
           
           await handleSubmit(cmd, true)
@@ -546,6 +645,32 @@ function App() {
             if (c.type === 'text') {
               return <Text key={i}>{c.text}</Text>;
             }
+            if (c.type === 'tool_call') {
+              return (
+                <Box key={i} marginY={1}>
+                  <Text dimColor>{`→ ${c.name}(${JSON.stringify(c.args)})${c.needsApproval ? ' [awaiting approval]' : ''}`}</Text>
+                </Box>
+              );
+            }
+            if (c.type === 'tool_result') {
+              return (
+                <Box key={i} marginLeft={2}>
+                  <Text dimColor italic>{c.output}</Text>
+                </Box>
+              );
+            }
+            if (c.type === 'edit_diff') {
+              return (
+                <Box key={i} flexDirection="column" marginY={1} borderStyle="round" borderColor="gray">
+                  <Text dimColor>{c.file}</Text>
+                  {c.diff.split('\n').map((line: string, j: number) => (
+                    <Text key={j} color={line.startsWith('+') ? 'green' : line.startsWith('-') ? 'red' : undefined}>
+                      {line}
+                    </Text>
+                  ))}
+                </Box>
+              );
+            }
             return null;
           })}
         </Box>
@@ -597,6 +722,7 @@ function App() {
         { name: 'test', description: 'Run pytest and auto-ingest failures', onExecute: () => handleSubmit('/test') },
         { name: 'forget', description: 'Clear active memory dataset', onExecute: () => handleSubmit('/forget') },
         { name: 'resolve', description: 'Log a fix/resolution for the active failure', onExecute: () => handleSubmit('/resolve') },
+        { name: 'fix', description: 'Autonomously diagnose and fix a failing test', onExecute: () => handleSubmit('/fix') },
         { name: 'flaky', description: 'Show flaky test metrics', onExecute: () => handleSubmit('/flaky') },
         { name: 'history', description: 'Show history for a specific test', onExecute: () => handleSubmit('/history') },
         { name: 'session', description: 'Show current session logs', onExecute: () => handleSubmit('/session') },
