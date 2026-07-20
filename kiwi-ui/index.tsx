@@ -186,6 +186,8 @@ function App() {
           appendBlock(assistantMsgId, { type: 'edit_diff', id: event.id, file: event.file, diff: event.diff })
         } else if (event.type === 'loop_done') {
           appendBlock(assistantMsgId, { type: 'text', text: event.summary })
+        } else if (event.type === 'error') {
+          appendBlock(assistantMsgId, { type: 'text', text: `Agent error: ${event.message}` })
         }
       }
     }

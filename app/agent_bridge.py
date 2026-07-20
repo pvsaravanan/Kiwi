@@ -3,7 +3,7 @@ import threading
 import uuid
 from typing import Optional
 
-from sentinel.agent.loop import run_agent_loop
+from sentinel.agent.loop import LoopEvent, run_agent_loop
 from sentinel.agent.providers.base import ProviderAdapter
 from sentinel.agent.tools import ToolContext
 
@@ -38,6 +38,11 @@ class AgentRun:
         try:
             for event in run_agent_loop(self._goal, self._provider, self._ctx, self._request_approval):
                 self._events.put(event)
+        except Exception as e:
+            # If the loop generator itself raises (provider network/auth/rate-limit
+            # errors, or a tool raising something other than ToolError), surface it
+            # to the client as an event instead of letting the stream die silently.
+            self._events.put(LoopEvent("error", {"message": str(e)}))
         finally:
             self._events.put(_SENTINEL)
 

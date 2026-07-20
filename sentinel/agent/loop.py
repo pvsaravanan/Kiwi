@@ -54,7 +54,12 @@ def run_agent_loop(
                 decision = request_approval(call)
                 if decision == "allow_rest_of_loop":
                     auto_approve = True
-                elif decision == "deny":
+                elif decision != "allow":
+                    # Fail closed: only an explicit "allow" (or a prior
+                    # allow_rest_of_loop) proceeds to execution. Any other
+                    # value -- "deny", a typo, garbage input -- is treated
+                    # as a denial, since this is the human-approval safety
+                    # boundary for risky tools like edit_file and shell.
                     result_text = "User denied this action."
                     messages.append(Message(role="tool", tool_call_id=call.id, tool_name=call.name, content=result_text))
                     yield LoopEvent("tool_result", {"id": call.id, "output": result_text})

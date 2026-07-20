@@ -125,6 +125,21 @@ def test_loop_stops_after_max_iterations_without_resolution(tmp_path):
     assert "3 iterations" in events[-1].data["summary"]
 
 
+def test_loop_unrecognized_decision_is_treated_as_denial(tmp_path):
+    (tmp_path / "a.py").write_text("x = 1\n", encoding="utf-8")
+    call = ToolCall(id="c1", name="edit_file", args={"path": "a.py", "old_string": "x = 1", "new_string": "x = 2"})
+    provider = FakeProvider([
+        AgentResponse(tool_calls=[call]),
+        AgentResponse(text="Stopped, edit was denied."),
+    ])
+    events = list(run_agent_loop("fix a.py", provider, make_ctx(tmp_path), request_approval=lambda c: "maybe"))
+
+    result_event = next(e for e in events if e.type == "tool_result")
+    assert result_event.data["output"] == "User denied this action."
+    assert (tmp_path / "a.py").read_text(encoding="utf-8") == "x = 1\n"
+    assert events[-1].data["success"] is True
+
+
 def test_loop_tool_error_is_fed_back_as_error_result(tmp_path):
     call = ToolCall(id="c1", name="read_file", args={"path": "missing.py"})
     provider = FakeProvider([

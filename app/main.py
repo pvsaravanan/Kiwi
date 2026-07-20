@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import os
+import queue
 import subprocess
 import json
 from pathlib import Path
@@ -373,7 +374,14 @@ def agent_start(req: AgentStartReq):
         yield json.dumps({"type": "loop_start", "loop_id": run.loop_id}) + "\n"
         try:
             while True:
-                event = run.next_event(timeout=120)
+                # 600s is a "the loop is truly stuck" safety net, not a normal-operation
+                # limit: it must comfortably exceed the longest single tool call
+                # (run_tests' own 300s timeout) plus realistic human-approval latency.
+                try:
+                    event = run.next_event(timeout=600)
+                except queue.Empty:
+                    yield json.dumps({"type": "error", "message": "Agent loop timed out waiting for the next event."}) + "\n"
+                    break
                 if event is None:
                     break
                 yield json.dumps({"type": event.type, **event.data}) + "\n"
