@@ -76,3 +76,56 @@ def test_search_code_glob_cannot_escape_repo_root(tmp_path):
 def test_read_file_and_search_code_are_not_approval_gated():
     assert TOOL_REGISTRY["read_file"].requires_approval is False
     assert TOOL_REGISTRY["search_code"].requires_approval is False
+
+
+def test_edit_file_replaces_unique_match_and_returns_diff(tmp_path):
+    (tmp_path / "a.py").write_text("def foo():\n    return 1\n", encoding="utf-8")
+    ctx = make_ctx(tmp_path)
+    diff = TOOL_REGISTRY["edit_file"].run(ctx, {
+        "path": "a.py", "old_string": "return 1", "new_string": "return 2",
+    })
+    assert (tmp_path / "a.py").read_text(encoding="utf-8") == "def foo():\n    return 2\n"
+    assert "-    return 1" in diff
+    assert "+    return 2" in diff
+
+
+def test_edit_file_raises_when_old_string_missing(tmp_path):
+    (tmp_path / "a.py").write_text("def foo():\n    return 1\n", encoding="utf-8")
+    ctx = make_ctx(tmp_path)
+    with pytest.raises(ToolError, match="not found"):
+        TOOL_REGISTRY["edit_file"].run(ctx, {
+            "path": "a.py", "old_string": "return 99", "new_string": "return 2",
+        })
+
+
+def test_edit_file_raises_when_old_string_not_unique(tmp_path):
+    (tmp_path / "a.py").write_text("x = 1\nx = 1\n", encoding="utf-8")
+    ctx = make_ctx(tmp_path)
+    with pytest.raises(ToolError, match="not unique"):
+        TOOL_REGISTRY["edit_file"].run(ctx, {
+            "path": "a.py", "old_string": "x = 1", "new_string": "x = 2",
+        })
+
+
+def test_shell_returns_exit_code_and_output(tmp_path):
+    ctx = make_ctx(tmp_path)
+    out = TOOL_REGISTRY["shell"].run(ctx, {"command": "echo hello"})
+    assert "exit code 0" in out
+    assert "hello" in out
+
+
+def test_shell_times_out_gracefully(tmp_path, monkeypatch):
+    import subprocess as sp
+
+    def fake_run(*args, **kwargs):
+        raise sp.TimeoutExpired(cmd="sleep 999", timeout=60)
+
+    monkeypatch.setattr("sentinel.agent.tools.subprocess.run", fake_run)
+    ctx = make_ctx(tmp_path)
+    out = TOOL_REGISTRY["shell"].run(ctx, {"command": "sleep 999"})
+    assert "timed out" in out.lower()
+
+
+def test_edit_file_and_shell_require_approval():
+    assert TOOL_REGISTRY["edit_file"].requires_approval is True
+    assert TOOL_REGISTRY["shell"].requires_approval is True

@@ -1,4 +1,6 @@
+import difflib
 import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -76,6 +78,40 @@ def _search_code(ctx: ToolContext, args: dict) -> str:
     return "\n".join(matches) if matches else "No matches found."
 
 
+def _edit_file(ctx: ToolContext, args: dict) -> str:
+    path = args["path"]
+    old_string = args["old_string"]
+    new_string = args["new_string"]
+    target = _safe_path(ctx.repo_root, path)
+    if not target.is_file():
+        raise ToolError(f"No such file: {path}")
+    original = target.read_text(encoding="utf-8")
+    count = original.count(old_string)
+    if count == 0:
+        raise ToolError(f"old_string not found in {path}")
+    if count > 1:
+        raise ToolError(f"old_string is not unique in {path} ({count} occurrences); include more context")
+    updated = original.replace(old_string, new_string, 1)
+    target.write_text(updated, encoding="utf-8")
+    diff = "\n".join(difflib.unified_diff(
+        original.splitlines(), updated.splitlines(),
+        fromfile=f"a/{path}", tofile=f"b/{path}", lineterm="",
+    ))
+    return diff
+
+
+def _shell(ctx: ToolContext, args: dict) -> str:
+    try:
+        result = subprocess.run(
+            args["command"], shell=True, cwd=ctx.repo_root,
+            capture_output=True, text=True, timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        return "Command timed out after 60s."
+    output = (result.stdout + result.stderr)[-4000:]
+    return f"exit code {result.returncode}\n{output}"
+
+
 TOOL_REGISTRY: dict[str, ToolSpec] = {
     "read_file": ToolSpec(
         schema=ToolSchema(
@@ -109,5 +145,37 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
         ),
         requires_approval=False,
         run=_search_code,
+    ),
+    "edit_file": ToolSpec(
+        schema=ToolSchema(
+            name="edit_file",
+            description="Replace an exact, unique string in a file. Fails if old_string is missing or ambiguous.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Repo-relative file path."},
+                    "old_string": {"type": "string", "description": "Exact text to replace; must be unique in the file."},
+                    "new_string": {"type": "string", "description": "Replacement text."},
+                },
+                "required": ["path", "old_string", "new_string"],
+            },
+        ),
+        requires_approval=True,
+        run=_edit_file,
+    ),
+    "shell": ToolSpec(
+        schema=ToolSchema(
+            name="shell",
+            description="Run a shell command in the repository root. Use for one-offs like checking git status or installing a dependency.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "Shell command to run."},
+                },
+                "required": ["command"],
+            },
+        ),
+        requires_approval=True,
+        run=_shell,
     ),
 }
