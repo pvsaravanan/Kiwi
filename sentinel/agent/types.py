@@ -6,6 +6,10 @@ class ToolCall:
     id: str
     name: str
     args: dict
+    # Opaque, provider-specific metadata that must be echoed back verbatim
+    # when replaying this call in a later turn (e.g. Gemini's thought_signature).
+    # Ignored by providers that don't need it.
+    provider_data: dict | None = None
 
 
 @dataclass
