@@ -36,6 +36,7 @@ This document describes all interactive slash (`/`) commands available in the Ki
   ```text
   /login
   ```
+* **Planned change**: once Kiwi migrates to self-hosted Cognee (Docker, no auth), this flow shrinks to just LLM Provider → LLM Model — there will be no Cognee credentials left to collect. See [Self-Hosted Cognee design](superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md).
 
 ### `/provider`
 * **Purpose**: Switches the active LLM provider.

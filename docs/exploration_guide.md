@@ -10,7 +10,7 @@ This guide helps you navigate and study the Kiwi codebase, showing how the UI, C
 |---|---|---|
 | **CLI & REPL Surface** | Interactive terminal rendering and command parser (React + Ink) | [kiwi-ui/index.tsx](../kiwi-ui/index.tsx) |
 | **Backend API** | FastAPI server hosting endpoints for queries, tests, and configuration | [app/main.py](../app/main.py) |
-| **Memory Client** | Client wrapper around Cognee graph database (`remember`, `recall`) | [sentinel/cognee_client.py](../sentinel/cognee_client.py) |
+| **Memory Client** | Client wrapper around Cognee graph database (`remember`, `recall`) — currently Cognee Cloud, migration to self-hosted Docker *(planned)* | [sentinel/cognee_client.py](../sentinel/cognee_client.py) — see [design](superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md) |
 | **Review Engine** | Prompt generator that builds and lints grounding reviews using LLMs | [sentinel/reviewer.py](../sentinel/reviewer.py) |
 | **Dynamic Configuration**| Priority-based env loader (.env.local -> .env) and state files | [sentinel/config.py](../sentinel/config.py) |
 | **Agentic QA Harness** | Multi-step tool-use loop (run → inspect → search → edit → rerun) for autonomously fixing failing tests | [sentinel/agent/](../sentinel/agent/) |

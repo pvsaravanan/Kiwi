@@ -125,6 +125,12 @@ Kiwi's `/fix [path]` command (and natural-language requests like "fix the failin
 
 ---
 
+## Roadmap: Self-Hosted Cognee *(planned)*
+
+Kiwi currently depends on Cognee Cloud (paid, `X-Api-Key`/`X-Tenant-Id` auth). Cognee itself is open source and self-hostable via Docker at no cost, with file-based storage (no Postgres/Neo4j required) and no auth needed for a local single-user setup like Kiwi's. This migration will fully replace Cloud, shrink `/login` from 5 steps to 2 (no more Cognee credentials to collect — just LLM provider and model), and add a `docker-compose.cognee.yml` that Kiwi's launcher starts automatically alongside the backend. See the design at [docs/superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md](docs/superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md).
+
+---
+
 ## Getting Started
 
 ### 1. Prerequisites
