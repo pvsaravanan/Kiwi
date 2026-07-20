@@ -12,6 +12,7 @@ dependencies = [
     "streamlit>=1.40",
     "pyvis>=0.3.2",
     "google-genai>=0.1.1",
+    "openai>=1.50",
     "rich>=13.7.0",
     "cryptography>=42.0",
 ]
