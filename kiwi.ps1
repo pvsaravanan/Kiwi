@@ -53,18 +53,28 @@ try {
 
         try {
             try {
-                docker compose --env-file $composeEnvFile -f (Join-Path $PSScriptRoot "docker-compose.cognee.yml") up -d | Out-Null
+                docker compose --env-file $composeEnvFile -f (Join-Path $PSScriptRoot "docker-compose.cognee.yml") up -d 2>&1 | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    throw "docker compose exited with code $LASTEXITCODE"
+                }
 
+                # First boot (or first boot after an image/schema change) runs a long
+                # alembic migration chain before the server starts - observed to take
+                # 80s+ even on an empty local sqlite DB. 30s was too short and produced
+                # a false "not healthy" warning while the container was still fine.
+                # curl.exe, not Invoke-WebRequest: IWR's System.Net.HttpWebRequest stack
+                # (even with -DisableKeepAlive) hangs unreliably against Cognee's uvicorn
+                # server until its 2s timeout on this setup - confirmed via 15+ back-to-back
+                # calls where curl.exe was always instant/200 and IWR intermittently or
+                # consistently timed out. curl.exe ships with Windows 10/11 by default.
                 $cogneeReady = $false
-                for ($i = 0; $i -lt 30; $i++) {
-                    try {
-                        $resp = Invoke-WebRequest -Uri "http://localhost:8010/health" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
-                        if ($resp.StatusCode -eq 200) { $cogneeReady = $true; break }
-                    } catch {}
+                for ($i = 0; $i -lt 90; $i++) {
+                    $code = & curl.exe -s -o NUL -w "%{http_code}" --max-time 2 "http://localhost:8010/health" 2>$null
+                    if ($code -eq "200") { $cogneeReady = $true; break }
                     Start-Sleep -Seconds 1
                 }
                 if (-not $cogneeReady) {
-                    Write-Warning "Cognee server did not respond healthy within 30s; continuing anyway (it may still be starting up, or has no network access to its LLM provider)."
+                    Write-Warning "Cognee server did not respond healthy within 90s; continuing anyway (it may still be starting up, or has no network access to its LLM provider)."
                 }
             } catch {
                 Write-Warning "Could not start the Cognee server (is Docker installed and running?): $_. Continuing without it."
