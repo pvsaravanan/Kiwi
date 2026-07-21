@@ -1,0 +1,15 @@
+services:
+  cognee:
+    image: cognee/cognee:main
+    ports:
+      - "8010:8000"
+    environment:
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_PROVIDER: ${LLM_PROVIDER}
+      LLM_MODEL: ${LLM_MODEL}
+    volumes:
+      - cognee_data:/app/.data
+    restart: unless-stopped
+
+volumes:
+  cognee_data:

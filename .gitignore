@@ -11,3 +11,4 @@ test-results.xml
 kiwi_session_state.json
 kiwi_secret.key
 node_modules/
+.cognee_compose.env
