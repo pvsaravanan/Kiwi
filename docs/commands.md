@@ -8,7 +8,7 @@ This document describes all interactive slash (`/`) commands available in the Ki
 
 | Command | Purpose | Example |
 |---|---|---|
-| [`/login`](#/login) | Interactive credentials authentication gate | `/login` |
+| [`/login`](#/login) | Picks the active LLM provider and model | `/login` |
 | [`/provider`](#/provider) | Switches the active LLM Provider at runtime | `/provider` |
 | [`/model`](#/model) | Switches the LLM model for the active provider | `/model` |
 | [`/config`](#/config) | Prints current session configuration details | `/config` |
@@ -30,13 +30,12 @@ This document describes all interactive slash (`/`) commands available in the Ki
 ## Detailed Command Documentation
 
 ### `/login`
-* **Purpose**: Authenticates the Kiwi session by configuring backend connections.
-* **Function**: Initializes the credentials pipeline. If credentials exist in the root `.env` or `.env.local` file, it automatically imports them (displaying `"Cognee credentials detected from .env file!"`) and prompts you to select the LLM Provider. Otherwise, it launches an interactive walkthrough asking you to specify the Cognee Base URL, API Key, and Tenant ID.
+* **Purpose**: Selects the active LLM provider and model for the session.
+* **Function**: Prompts you to choose an LLM Provider, then a model for that provider. Cognee itself runs self-hosted with no auth, so there are no Cognee credentials to collect.
 * **Example**:
   ```text
   /login
   ```
-* **Planned change**: once Kiwi migrates to self-hosted Cognee (Docker, no auth), this flow shrinks to just LLM Provider → LLM Model — there will be no Cognee credentials left to collect. See [Self-Hosted Cognee design](superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md).
 
 ### `/provider`
 * **Purpose**: Switches the active LLM provider.

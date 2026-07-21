@@ -101,7 +101,7 @@ Translates JUnit XML outputs and git changes into grounded developer reviews via
 
 | Command | Description |
 |---|---|
-| `/login` | Starts the step-by-step interactive credentials gate. |
+| `/login` | Picks your LLM provider and model (Cognee itself needs no login — self-hosted, no auth). |
 | `/provider` | Allows switching active LLM Provider (Anthropic, OpenAI, Gemini). |
 | `/model` | Allows selecting provider-specific models. |
 | `/config` | Prints active configuration and settings. |
@@ -125,9 +125,9 @@ Kiwi's `/fix [path]` command (and natural-language requests like "fix the failin
 
 ---
 
-## Roadmap: Self-Hosted Cognee *(planned)*
+## Self-Hosted Cognee
 
-Kiwi currently depends on Cognee Cloud (paid, `X-Api-Key`/`X-Tenant-Id` auth). Cognee itself is open source and self-hostable via Docker at no cost, with file-based storage (no Postgres/Neo4j required) and no auth needed for a local single-user setup like Kiwi's. This migration will fully replace Cloud, shrink `/login` from 5 steps to 2 (no more Cognee credentials to collect — just LLM provider and model), and add a `docker-compose.cognee.yml` that Kiwi's launcher starts automatically alongside the backend. See the design at [docs/superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md](docs/superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md).
+Kiwi runs entirely on a self-hosted, Dockerized Cognee instance (`docker-compose.cognee.yml`) instead of the paid Cognee Cloud — `kiwi.ps1` starts it automatically alongside the backend. No Cognee auth is required for this local single-user setup, so `/login` only asks for your LLM provider and model. See the design at [docs/superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md](docs/superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md).
 
 ---
 
@@ -137,16 +137,13 @@ Kiwi currently depends on Cognee Cloud (paid, `X-Api-Key`/`X-Tenant-Id` auth). C
 * Python 3.12+
 * Node.js & pnpm
 * uv (Fast Python package manager)
+* Docker (for the self-hosted Cognee server)
 
 ### 2. Configuration Setup
-Copy `.env.example` to `.env` (or `.env.local`) and fill in real values:
+Copy `.env.example` to `.env` (or `.env.local`) and fill in at least one LLM key. `kiwi.ps1` auto-starts a local self-hosted Cognee server (via `docker-compose.cognee.yml`) using whichever key you provide — no Cognee account or API key needed.
 ```env
-COGNEE_BASE_URL=https://tenant-<your-tenant-id>.aws.cognee.ai
-COGNEE_API_KEY=your_api_key_here
-COGNEE_TENANT_ID=your-tenant-id
+# COGNEE_BASE_URL=http://localhost:8010  # optional override; defaults to this if unset
 SENTINEL_DATASET=sentinel
-
-# LLM Keys
 ANTHROPIC_API_KEY=your_anthropic_key_here
 GEMINI_API_KEY=your_gemini_key_here
 OPENAI_API_KEY=your_openai_key_here

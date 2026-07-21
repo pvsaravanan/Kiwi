@@ -29,7 +29,7 @@ A FastAPI web service coordinating executions and client interactions.
 ## 3. Memory Subsystem
 **Location:** [sentinel/cognee_client.py](../sentinel/cognee_client.py)
 
-Connects the agent to a Cognee graph database. Currently backed by Cognee Cloud (`X-Api-Key`/`X-Tenant-Id` auth); a migration to a self-hosted Docker instance (no auth, no cloud dependency) is planned — see [Self-Hosted Cognee design](superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md). The verified REST routes (`remember`/`recall`/`forget`) are identical between Cloud and self-hosted, so this subsystem's request logic is expected to change minimally; only the auth headers and base URL default go away.
+Connects the agent to a self-hosted Cognee graph database (`docker-compose.cognee.yml`, no auth, no cloud dependency). See [Self-Hosted Cognee design](superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md) for the migration rationale.
 * **Remember pipeline**: Serializes test traces, stack traces, and resolution summaries, writing them into graph databases.
 * **Recall pipeline**: Uses vector search and semantic matching to find similar failure context based on test signatures.
 
