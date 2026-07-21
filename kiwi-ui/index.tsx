@@ -24,10 +24,7 @@ function KiwiLogo({ color = "#84cc16" }: { color?: string }): React.ReactNode {
 }
 
 type LoginState = {
-  step: 'idle' | 'base_url' | 'api_key' | 'tenant_id' | 'llm_provider' | 'llm_model';
-  baseUrl?: string;
-  apiKey?: string;
-  tenantId?: string;
+  step: 'idle' | 'llm_provider' | 'llm_model';
   llmProvider?: string;
   llmModel?: string;
 }
@@ -38,7 +35,6 @@ function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loginState, setLoginState] = useState<LoginState>({ step: 'idle' })
-  const [envCredentials, setEnvCredentials] = useState<{ baseUrl: string, apiKey: string, tenantId: string } | null>(null)
   const ctrlCPressedRef = React.useRef(false)
   const pendingApprovalRef = React.useRef<((input: string) => void) | null>(null)
 
@@ -46,20 +42,10 @@ function App() {
     async function checkAuth() {
       try {
         const resp = await axios.get(`${BACKEND_URL}/kiwi/auth-status`)
-        if (resp.data.has_env_credentials) {
-          setEnvCredentials({
-            baseUrl: resp.data.base_url,
-            apiKey: resp.data.api_key,
-            tenantId: resp.data.tenant_id
-          })
-        }
         if (resp.data.is_logged_in) {
           setIsLoggedIn(true)
           setLoginState({
             step: 'idle',
-            baseUrl: resp.data.base_url,
-            apiKey: resp.data.api_key,
-            tenantId: resp.data.tenant_id,
             llmProvider: resp.data.llm_provider,
             llmModel: resp.data.llm_model
           })
@@ -210,16 +196,7 @@ function App() {
     // Check login state steps
     if (loginState.step !== 'idle') {
       try {
-        if (loginState.step === 'base_url') {
-          setLoginState(prev => ({ ...prev, step: 'api_key', baseUrl: text }))
-          setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Enter Cognee API Key:' }])
-        } else if (loginState.step === 'api_key') {
-          setLoginState(prev => ({ ...prev, step: 'tenant_id', apiKey: text }))
-          setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Enter Tenant ID:' }])
-        } else if (loginState.step === 'tenant_id') {
-          setLoginState(prev => ({ ...prev, step: 'llm_provider', tenantId: text }))
-          setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Choose LLM Provider:\n1. Anthropic\n2. OpenAI\n3. Gemini\nEnter number (1-3):' }])
-        } else if (loginState.step === 'llm_provider') {
+        if (loginState.step === 'llm_provider') {
           const val = text.trim().toLowerCase()
           let provider = ''
           if (val === '1' || val === 'anthropic') {
@@ -279,9 +256,6 @@ function App() {
             
             // Post to backend to save auth status persistently
             await axios.post(`${BACKEND_URL}/kiwi/login`, {
-              base_url: nextState.baseUrl || '',
-              api_key: nextState.apiKey || '',
-              tenant_id: nextState.tenantId || '',
               llm_provider: nextState.llmProvider || '',
               llm_model: model
             })
@@ -412,8 +386,6 @@ function App() {
       } else if (text.startsWith('/config')) {
         const configDetails = [
           'Active Configuration:',
-          `  - Cognee Base URL: ${loginState.baseUrl || 'Not configured'}`,
-          `  - Tenant ID:       ${loginState.tenantId || 'Not configured'}`,
           `  - LLM Provider:    ${loginState.llmProvider || 'Not configured'}`,
           `  - LLM Model:       ${loginState.llmModel || 'Not configured'}`
         ].join('\n')
@@ -421,18 +393,8 @@ function App() {
       } else if (text.startsWith('/clear')) {
         setMessages([])
       } else if (text.startsWith('/login')) {
-        if (envCredentials) {
-          setLoginState({
-            step: 'llm_provider',
-            baseUrl: envCredentials.baseUrl,
-            apiKey: envCredentials.apiKey,
-            tenantId: envCredentials.tenantId
-          })
-          setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Cognee credentials detected from .env file!\nChoose LLM Provider:\n1. Anthropic\n2. OpenAI\n3. Gemini\nEnter number (1-3):' }])
-        } else {
-          setLoginState({ step: 'base_url' })
-          setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Enter Cognee Base URL:' }])
-        }
+        setLoginState({ step: 'llm_provider' })
+        setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Choose LLM Provider:\n1. Anthropic\n2. OpenAI\n3. Gemini\nEnter number (1-3):' }])
       } else if (text.startsWith('/exit')) {
         exit()
       } else if (text.startsWith('/help')) {
@@ -598,7 +560,7 @@ function App() {
     } finally {
       setIsLoading(false)
     }
-  }, [isLoggedIn, loginState, envCredentials])
+  }, [isLoggedIn, loginState])
 
   const customRenderMessage = useCallback((message: any) => {
     const isUser = message.role === "user";
