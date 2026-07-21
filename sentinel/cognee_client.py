@@ -2,7 +2,7 @@ import io
 
 import requests
 
-from sentinel.config import Settings, auth_headers, load_settings
+from sentinel.config import Settings, load_settings
 
 
 class CogneeError(RuntimeError):
@@ -10,7 +10,7 @@ class CogneeError(RuntimeError):
 
 
 class CogneeClient:
-    """Thin wrapper over the Cognee Cloud REST API (verified against the live tenant)."""
+    """Thin wrapper over a self-hosted Cognee REST API (no auth for local single-user use)."""
 
     def __init__(self, settings: Settings | None = None, http=None):
         self.settings = settings or load_settings()
@@ -18,10 +18,9 @@ class CogneeClient:
 
     def _request(self, method: str, path: str, *, timeout: int = 180, **kwargs):
         url = f"{self.settings.base_url}{path}"
-        headers = auth_headers(self.settings)
-        resp = self.http.request(method, url, headers=headers, timeout=timeout, **kwargs)
+        resp = self.http.request(method, url, timeout=timeout, **kwargs)
         if resp.status_code >= 500:  # one retry on transient server errors
-            resp = self.http.request(method, url, headers=headers, timeout=timeout, **kwargs)
+            resp = self.http.request(method, url, timeout=timeout, **kwargs)
         if resp.status_code >= 400:
             raise CogneeError(f"{method} {path} -> HTTP {resp.status_code}: {resp.text[:500]}")
         return resp.json()

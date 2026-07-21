@@ -5,7 +5,7 @@ import pytest
 from sentinel.cognee_client import CogneeClient, CogneeError
 from sentinel.config import Settings
 
-S = Settings(base_url="https://t.example", api_key="k", tenant_id="tid", dataset="sentinel")
+S = Settings(base_url="https://t.example", dataset="sentinel")
 
 
 def make_client(status=200, payload=None):
@@ -18,7 +18,7 @@ def make_client(status=200, payload=None):
     return CogneeClient(settings=S, http=http), http
 
 
-def test_remember_posts_multipart_with_dataset():
+def test_remember_posts_multipart_with_dataset_and_no_auth_headers():
     client, http = make_client(payload={"status": "completed"})
     out = client.remember("failure text", dataset="sentinel")
     assert out == {"status": "completed"}
@@ -26,7 +26,7 @@ def test_remember_posts_multipart_with_dataset():
     assert http.request.call_args[0] == ("POST", "https://t.example/api/v1/remember")
     assert kwargs["data"] == {"datasetName": "sentinel"}
     assert "data" in kwargs["files"]
-    assert kwargs["headers"] == {"X-Api-Key": "k", "X-Tenant-Id": "tid"}
+    assert "headers" not in kwargs
 
 
 def test_remember_includes_session_id_when_given():

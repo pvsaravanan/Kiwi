@@ -21,40 +21,20 @@ for f in env_files:
         load_dotenv(f)
 
 
+# Self-hosted Cognee's default port (8000) collides with Kiwi's own backend,
+# so docker-compose.cognee.yml maps it to the host at 8010 instead.
+DEFAULT_BASE_URL = "http://localhost:8010"
+
+
 @dataclass(frozen=True)
 class Settings:
     base_url: str
-    api_key: str
-    tenant_id: str
     dataset: str
 
 
-def _require(name: str) -> str:
-    value = os.environ.get(name, "").strip()
-    if not value:
-        raise RuntimeError(f"Missing required env var: {name}")
-    return value
-
-
 def load_settings() -> Settings:
-    if "PYTEST_CURRENT_TEST" not in os.environ:
-        from sentinel.session_state import load_state
-        state = load_state()
-        if state.get("is_logged_in") and state.get("base_url") and state.get("api_key") and state.get("tenant_id"):
-            return Settings(
-                base_url=state["base_url"].rstrip("/"),
-                api_key=state["api_key"],
-                tenant_id=state["tenant_id"],
-                dataset=os.environ.get("SENTINEL_DATASET", "sentinel"),
-            )
-
+    base_url = os.environ.get("COGNEE_BASE_URL", "").strip() or DEFAULT_BASE_URL
     return Settings(
-        base_url=_require("COGNEE_BASE_URL").rstrip("/"),
-        api_key=_require("COGNEE_API_KEY"),
-        tenant_id=_require("COGNEE_TENANT_ID"),
+        base_url=base_url.rstrip("/"),
         dataset=os.environ.get("SENTINEL_DATASET", "sentinel"),
     )
-
-
-def auth_headers(settings: Settings) -> dict[str, str]:
-    return {"X-Api-Key": settings.api_key, "X-Tenant-Id": settings.tenant_id}
