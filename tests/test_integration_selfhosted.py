@@ -3,17 +3,15 @@ import time
 import pytest
 
 from sentinel.cognee_client import CogneeClient
+from sentinel.config import load_settings
 
 pytestmark = pytest.mark.integration
 
-# Unique name per run: Cognee Cloud 500s when deleting a dataset whose name was
-# previously deleted and re-created (verified 2026-07-03), so cleanup must
-# always be the first-ever delete of the name.
 DATASET = f"sentinel_smoke_{int(time.time())}"
 
 
 def test_full_lifecycle_roundtrip():
-    client = CogneeClient()
+    client = CogneeClient(load_settings())
     try:
         client.remember(
             "Test test_roundtrip failed: race condition caused duplicate charge. "
