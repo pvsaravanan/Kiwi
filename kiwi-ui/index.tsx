@@ -252,16 +252,21 @@ function App() {
             setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Invalid choice. ' + optionsStr }])
           } else {
             const nextState = { ...loginState, step: 'idle' as const, llmModel: model }
-            setLoginState(nextState)
-            
-            // Post to backend to save auth status persistently
-            await axios.post(`${BACKEND_URL}/kiwi/login`, {
-              llm_provider: nextState.llmProvider || '',
-              llm_model: model
-            })
+            try {
+              // Post to backend to save auth status persistently
+              await axios.post(`${BACKEND_URL}/kiwi/login`, {
+                llm_provider: nextState.llmProvider || '',
+                llm_model: model
+              })
 
-            setIsLoggedIn(true)
-            setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: `Login successful! Active session initialized with provider: ${nextState.llmProvider} (${model}).` }])
+              setLoginState(nextState)
+              setIsLoggedIn(true)
+              setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: `Login successful! Active session initialized with provider: ${nextState.llmProvider} (${model}).` }])
+            } catch (e: any) {
+              const errMsg = e.response?.data?.detail || e.message
+              setLoginState({ step: 'idle' })
+              setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: `Login failed: ${errMsg}\nRun /login to try again.` }])
+            }
           }
         }
       } finally {
