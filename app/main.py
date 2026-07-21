@@ -40,9 +40,6 @@ class ForgetReq(BaseModel):
 
 
 class LoginDetails(BaseModel):
-    base_url: str
-    api_key: str
-    tenant_id: str
     llm_provider: str
     llm_model: str
 
@@ -313,18 +310,10 @@ def kiwi_session():
 @app.get("/kiwi/auth-status")
 def auth_status():
     state = load_state()
-    env_base_url = os.environ.get("COGNEE_BASE_URL", "").strip()
-    env_api_key = os.environ.get("COGNEE_API_KEY", "").strip()
-    env_tenant_id = os.environ.get("COGNEE_TENANT_ID", "").strip()
-    has_env = bool(env_base_url and env_api_key and env_tenant_id)
     return {
         "is_logged_in": state.get("is_logged_in", False),
-        "base_url": state.get("base_url", env_base_url),
-        "api_key": state.get("api_key", env_api_key),
-        "tenant_id": state.get("tenant_id", env_tenant_id),
         "llm_provider": state.get("llm_provider", ""),
         "llm_model": state.get("llm_model", ""),
-        "has_env_credentials": has_env
     }
 
 
@@ -333,9 +322,6 @@ def kiwi_login(req: LoginDetails):
     try:
         state = load_state()
         state["is_logged_in"] = True
-        state["base_url"] = req.base_url
-        state["api_key"] = req.api_key
-        state["tenant_id"] = req.tenant_id
         state["llm_provider"] = req.llm_provider
         state["llm_model"] = req.llm_model
         save_state(state)
