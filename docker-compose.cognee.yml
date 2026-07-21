@@ -7,6 +7,13 @@ services:
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_PROVIDER: ${LLM_PROVIDER}
       LLM_MODEL: ${LLM_MODEL}
+      # This Cognee version defaults to authentication=required, multi_tenant=enabled
+      # even with no other auth env vars set (confirmed via the container's own
+      # startup log: "auth posture: authentication=required ... (default (no env
+      # vars set))") - the opposite of what generic Cognee docs describe for older
+      # versions. Disabling backend access control is what actually removes the
+      # auth requirement for this local single-user setup.
+      ENABLE_BACKEND_ACCESS_CONTROL: "false"
     volumes:
       - cognee_data:/app/.data
     restart: unless-stopped

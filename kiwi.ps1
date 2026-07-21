@@ -48,6 +48,7 @@ try {
             "LLM_API_KEY=$llmApiKey"
             "LLM_PROVIDER=$llmProvider"
             "LLM_MODEL=$llmProvider/$llmModel"
+            "ENABLE_BACKEND_ACCESS_CONTROL=false"
         ) | Set-Content -Path $composeEnvFile -Encoding ascii
 
         try {
