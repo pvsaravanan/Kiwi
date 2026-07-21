@@ -135,6 +135,8 @@ docker compose -f docker-compose.cognee.yml down
 ```
 Add `-v` to also wipe its stored memory data: `docker compose -f docker-compose.cognee.yml down -v`
 
+**Upgrading from before this migration?** If your `.env` still has `COGNEE_BASE_URL` pointed at a `*.aws.cognee.ai` Cloud URL (plus `COGNEE_API_KEY`/`COGNEE_TENANT_ID`), remove those three lines — otherwise Kiwi keeps silently talking to Cloud, which now rejects every request since credentials are no longer sent.
+
 ---
 
 ## Getting Started
