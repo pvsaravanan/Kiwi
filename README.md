@@ -129,6 +129,12 @@ Kiwi's `/fix [path]` command (and natural-language requests like "fix the failin
 
 Kiwi runs entirely on a self-hosted, Dockerized Cognee instance (`docker-compose.cognee.yml`) instead of the paid Cognee Cloud — `kiwi.ps1` starts it automatically alongside the backend. No Cognee auth is required for this local single-user setup, so `/login` only asks for your LLM provider and model. See the design at [docs/superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md](docs/superpowers/specs/2026-07-20-cognee-self-hosted-migration-design.md).
 
+To stop the Cognee server (data persists, restarts fresh on next `.\kiwi` launch):
+```bash
+docker compose -f docker-compose.cognee.yml down
+```
+Add `-v` to also wipe its stored memory data: `docker compose -f docker-compose.cognee.yml down -v`
+
 ---
 
 ## Getting Started

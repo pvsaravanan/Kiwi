@@ -41,25 +41,32 @@ try {
         # `up -d` (silently defaults them to blank) - write a transient env file
         # and pass it explicitly instead. Never committed (gitignored).
         $composeEnvFile = Join-Path $PSScriptRoot ".cognee_compose.env"
+        # -Encoding ascii (not utf8, which emits a BOM in Windows PowerShell 5.1
+        # that docker compose's --env-file parser can mishandle on the first key).
+        # Keys/values here are always plain ASCII.
         @(
             "LLM_API_KEY=$llmApiKey"
             "LLM_PROVIDER=$llmProvider"
             "LLM_MODEL=$llmProvider/$llmModel"
-        ) | Set-Content -Path $composeEnvFile -Encoding utf8
+        ) | Set-Content -Path $composeEnvFile -Encoding ascii
 
         try {
-            docker compose --env-file $composeEnvFile -f (Join-Path $PSScriptRoot "docker-compose.cognee.yml") up -d | Out-Null
+            try {
+                docker compose --env-file $composeEnvFile -f (Join-Path $PSScriptRoot "docker-compose.cognee.yml") up -d | Out-Null
 
-            $cogneeReady = $false
-            for ($i = 0; $i -lt 30; $i++) {
-                try {
-                    $resp = Invoke-WebRequest -Uri "http://localhost:8010/health" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
-                    if ($resp.StatusCode -eq 200) { $cogneeReady = $true; break }
-                } catch {}
-                Start-Sleep -Seconds 1
-            }
-            if (-not $cogneeReady) {
-                Write-Warning "Cognee server did not respond healthy within 30s; continuing anyway (it may still be starting up, or has no network access to its LLM provider)."
+                $cogneeReady = $false
+                for ($i = 0; $i -lt 30; $i++) {
+                    try {
+                        $resp = Invoke-WebRequest -Uri "http://localhost:8010/health" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+                        if ($resp.StatusCode -eq 200) { $cogneeReady = $true; break }
+                    } catch {}
+                    Start-Sleep -Seconds 1
+                }
+                if (-not $cogneeReady) {
+                    Write-Warning "Cognee server did not respond healthy within 30s; continuing anyway (it may still be starting up, or has no network access to its LLM provider)."
+                }
+            } catch {
+                Write-Warning "Could not start the Cognee server (is Docker installed and running?): $_. Continuing without it."
             }
         } finally {
             Remove-Item -Path $composeEnvFile -Force -ErrorAction SilentlyContinue

@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 uv sync                                   # install/sync dependencies
 uv run pytest tests/ app/tests/ -q        # full non-integration suite (default: -m 'not integration')
 uv run pytest tests/agent/test_loop.py::test_loop_ends_immediately_on_final_text_response -v  # single test
-uv run pytest -m integration              # integration tests (hit real Cognee Cloud / LLM APIs; excluded by default)
+uv run pytest -m integration              # integration tests (hit the local self-hosted Cognee server / real LLM APIs; excluded by default)
 uv run uvicorn app.main:app --port 8000   # run the FastAPI backend alone
 ```
 
@@ -44,12 +44,16 @@ app/main.py (FastAPI backend, single-file router)
         |
 sentinel/  (config, memory client, LLM client, ingest/review, agent loop)
         |
-Cognee (currently Cloud, self-hosted migration planned — see docs/superpowers/specs/)
+Cognee (self-hosted via docker-compose.cognee.yml, no auth — kiwi.ps1 starts it automatically)
 ```
 
 ### Config resolution
 
-`sentinel/config.py` loads `.env*` files in priority order (`.env.local` > `.env.<mode>.local` > `.env.<mode>` > `.env`) at import time via `python-dotenv`. Once a user has run `/login`, `kiwi_session_state.json` (gitignored, **Fernet-encrypted** via `sentinel/session_state.py`, key in gitignored `kiwi_secret.key`) takes priority over env vars for Cognee credentials and the active LLM provider/model. `sentinel/session_state.py` is the single shared `load_state()`/`save_state()` used by `app/main.py`, `sentinel/config.py`, and `sentinel/llm_client.py` — don't read/write `kiwi_session_state.json` directly from a new call site.
+`sentinel/config.py` loads `.env*` files in priority order (`.env.local` > `.env.<mode>.local` > `.env.<mode>` > `.env`) at import time via `python-dotenv`. `COGNEE_BASE_URL` comes straight from env, defaulting to `http://localhost:8010` (self-hosted Cognee needs no credentials). Once a user has run `/login`, `kiwi_session_state.json` (gitignored, **Fernet-encrypted** via `sentinel/session_state.py`, key in gitignored `kiwi_secret.key`) takes priority over env vars for the active LLM provider/model only. `sentinel/session_state.py` is the single shared `load_state()`/`save_state()` used by `app/main.py`, `sentinel/config.py`, and `sentinel/llm_client.py` — don't read/write `kiwi_session_state.json` directly from a new call site.
+
+### Self-hosted Cognee server
+
+`docker-compose.cognee.yml` runs the official `cognee/cognee:main` image, bound to `127.0.0.1:8010` only (8000 collides with Kiwi's own backend), no auth, file-based storage. `kiwi.ps1` starts it automatically before the backend, resolving a real `LLM_API_KEY` for Cognee's own internal cognify pipeline from whichever of `ANTHROPIC_API_KEY`/`OPENAI_API_KEY`/`GEMINI_API_KEY` is real in `.env` — separate from (but often the same underlying key as) whichever provider Kiwi's own chat/agent loop is using. It writes that key to a transient `.cognee_compose.env` file (gitignored, `-Encoding ascii` — not `utf8`, which emits a BOM that corrupts `docker compose --env-file`'s first key) and cleans it up in a `finally` block; inherited `$env:` vars did not reliably substitute into the compose file's `${VAR}` references on Windows/Docker Desktop, hence the file. The container is never stopped on `/exit` — it's a persistent local data store.
 
 ### Two separate LLM code paths — don't conflate them
 
@@ -70,7 +74,7 @@ Known cross-provider gotchas already fixed once, worth remembering before "fixin
 
 ### Testing conventions
 
-Plain `pytest` + `unittest.mock.MagicMock`/`monkeypatch` throughout — no other test framework, no fixtures-heavy setup beyond a shared `tests/fixtures/` dir for JUnit XML samples. Tests marked `@pytest.mark.integration` hit live external services (Cognee Cloud, real LLM APIs) and are excluded by the default `addopts` in `pyproject.toml`; run them explicitly and expect them to need real credentials in `.env`.
+Plain `pytest` + `unittest.mock.MagicMock`/`monkeypatch` throughout — no other test framework, no fixtures-heavy setup beyond a shared `tests/fixtures/` dir for JUnit XML samples. Tests marked `@pytest.mark.integration` hit live external services (the local self-hosted Cognee server, real LLM APIs) and are excluded by the default `addopts` in `pyproject.toml`; run them explicitly and expect them to need the Cognee container running (`docker compose -f docker-compose.cognee.yml up -d`) and real LLM credentials in `.env`.
 
 ### Design docs for larger changes
 
