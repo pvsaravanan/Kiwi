@@ -13,6 +13,13 @@ except ImportError:
     genai = None
     types = None
 
+# Imported at module load, like the two above: importing it lazily inside
+# get_llm_client() cost ~1.7s on the first /login instead of at server startup.
+try:
+    import openai
+except ImportError:
+    openai = None
+
 
 def get_llm_client():
     from sentinel.session_state import load_state
@@ -48,12 +55,8 @@ def get_llm_client():
         return "anthropic", anthropic.Anthropic(api_key=api_key), model or "claude-opus-4-8"
     elif provider == "gemini" and genai:
         return "gemini", genai.Client(api_key=api_key), model or "gemini-3-flash-preview"
-    elif provider == "openai":
-        try:
-            import openai
-            return "openai", openai.OpenAI(api_key=api_key), model or "gpt-5.5"
-        except ImportError:
-            pass
+    elif provider == "openai" and openai:
+        return "openai", openai.OpenAI(api_key=api_key), model or "gpt-5.5"
     return None, None, None
 
 
@@ -146,31 +149,26 @@ def stream_llm(provider, client, prompt: str, system_instruction: str = "You are
 
 def validate_llm_credentials(provider: str, model: str) -> tuple[bool, str]:
     """
-    Attempts a minimal API call to verify the active LLM credentials.
-    Returns (True, "") if successful, or (False, "error message") on failure.
+    Verifies the active LLM credentials via a lightweight models-metadata lookup.
+
+    Deliberately *not* a generation call: sending even a 5-token "ping" to a
+    reasoning model (gpt-5.x, gemini-3, thinking-enabled Claude) costs many
+    seconds of model time and made /login take ~12s. A models lookup
+    authenticates the same key - and confirms the chosen model is reachable -
+    in well under a second.
     """
     p, client, m = get_llm_client()
     if not p or not client:
-        return False, f"No valid API key or client setup found in environment for {provider.capitalize()}."
-    
+        label = (provider or "the selected provider").capitalize()
+        return False, f"No valid API key or client setup found in environment for {label}."
+
     try:
         if p == "anthropic":
-            client.messages.create(
-                model=m,
-                max_tokens=5,
-                messages=[{"role": "user", "content": "ping"}]
-            )
+            client.models.retrieve(m)
         elif p == "gemini":
-            client.models.generate_content(
-                model=m,
-                contents="ping"
-            )
+            client.models.get(model=m)
         elif p == "openai":
-            client.chat.completions.create(
-                model=m,
-                messages=[{"role": "user", "content": "ping"}],
-                max_completion_tokens=5
-            )
+            client.models.retrieve(m)
         return True, ""
     except Exception as e:
         return False, str(e)
