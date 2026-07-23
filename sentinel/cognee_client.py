@@ -9,6 +9,38 @@ class CogneeError(RuntimeError):
     pass
 
 
+# Cognee preflights its own LLM credentials before running cognify, and retries
+# *any* failure - auth, quota, rate limit - with backoff until a 30s budget runs
+# out, then reports the lot as a connection timeout. Its suggested remedies are
+# actively misleading: the endpoint is usually reachable and answering in well
+# under a second, and skipping the check only moves the failure a few seconds
+# later into cognify, which still needs real LLM calls.
+_LLM_PREFLIGHT_MARKER = "LLM connection test timed out"
+
+_LLM_PREFLIGHT_HELP = (
+    "Cognee's own LLM provider did not answer within its 30s preflight budget.\n"
+    "Despite the wording, this usually is NOT a network problem: Cognee retries "
+    "quota and rate-limit errors with backoff until the budget expires, so an "
+    "exhausted quota surfaces here as a timeout. (A plainly invalid key reports "
+    "'LLM authentication failed' instead, so that is likely not the cause.)\n"
+    "This is the key Cognee uses for its internal cognify pipeline "
+    "(.cognee_compose.env, written by kiwi.ps1 from your .env) - not whichever "
+    "provider you logged in to Kiwi with.\n"
+    "Container logs only repeat this same message; to see what the provider really "
+    "said, run:  uv run python scripts/diagnose_cognee_llm.py\n"
+    "After fixing the key or its billing, fully restart .\\kiwi - the container "
+    "bakes the key in at creation time."
+)
+
+
+def _explain(method: str, path: str, status: int, body: str) -> str:
+    """Turn a Cognee error body into something actionable, where we can recognise it."""
+    prefix = f"{method} {path} -> HTTP {status}: "
+    if _LLM_PREFLIGHT_MARKER in body:
+        return prefix + _LLM_PREFLIGHT_HELP
+    return prefix + body[:500]
+
+
 class CogneeClient:
     """Thin wrapper over a self-hosted Cognee REST API (no auth for local single-user use)."""
 
@@ -22,7 +54,7 @@ class CogneeClient:
         if resp.status_code >= 500:  # one retry on transient server errors
             resp = self.http.request(method, url, timeout=timeout, **kwargs)
         if resp.status_code >= 400:
-            raise CogneeError(f"{method} {path} -> HTTP {resp.status_code}: {resp.text[:500]}")
+            raise CogneeError(_explain(method, path, resp.status_code, resp.text))
         return resp.json()
 
     def remember(self, text: str, *, dataset: str, session_id: str | None = None,

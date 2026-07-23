@@ -55,7 +55,7 @@ This document describes all interactive slash (`/`) commands available in the Ki
 
 ### `/model`
 * **Purpose**: Updates the specific AI model configuration.
-* **Function**: Switches model sizes/versions for the currently active LLM provider (e.g. switching from `gemini-3.5-flash` to `gemini-3.1-pro-preview`).
+* **Function**: Switches model sizes/versions for the currently active LLM provider (e.g. switching from `gemini-3.6-flash` to `gemini-3.5-flash-lite`).
 * **Example**:
   ```text
   /model
@@ -63,11 +63,12 @@ This document describes all interactive slash (`/`) commands available in the Ki
   *Output:*
   ```text
   Choose Gemini model:
-  1. gemini-3.5-flash
-  2. gemini-3.1-flash-lite
-  3. gemini-3.1-pro-preview
-  4. gemini-3-flash-preview
-  Enter number (1-4):
+  1. gemini-3.6-flash
+  2. gemini-3.5-flash
+  3. gemini-3.5-flash-lite
+  4. gemini-3.1-flash-lite
+  5. gemini-2.5-flash
+  Enter number (1-5):
   ```
 
 ### `/config`
@@ -83,7 +84,7 @@ This document describes all interactive slash (`/`) commands available in the Ki
     - Cognee Base URL: https://tenant-d4bbb38b.aws.cognee.ai
     - Tenant ID:       d4bbb38b-84bf-42b2-9780-838433c58e62
     - LLM Provider:    Gemini
-    - LLM Model:       gemini-3.1-pro-preview
+    - LLM Model:       gemini-3.6-flash
   ```
 
 ### `/test [path]`

@@ -32,7 +32,7 @@ try {
     } elseif ($geminiKey -and $geminiKey -ne "your_gemini_key_here") {
         $llmApiKey = $geminiKey
         $llmProvider = "gemini"
-        $llmModel = "gemini-3-flash-preview"
+        $llmModel = "gemini-3.6-flash"
     }
 
     if ($llmApiKey) {

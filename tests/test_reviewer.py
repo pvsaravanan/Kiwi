@@ -86,7 +86,7 @@ def test_build_review_calls_gemini_and_grounds(monkeypatch):
         
         mock_genai.Client.assert_called_once()
         generate_kwargs = mock_genai.Client.return_value.models.generate_content.call_args.kwargs
-        assert generate_kwargs["model"] == "gemini-3-flash-preview"
+        assert generate_kwargs["model"] == "gemini-3.6-flash"
         assert "billed twice" in out
 
 

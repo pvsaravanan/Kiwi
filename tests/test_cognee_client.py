@@ -68,6 +68,53 @@ def test_4xx_raises_cognee_error_with_body():
         client.recall("q", dataset="d")
 
 
+# Cognee preflights its own LLM credentials and retries *any* failure - including
+# auth and quota errors - with backoff until a 30s budget expires, then reports the
+# whole thing as a connection timeout. Taken at face value that message sends you
+# debugging the network while the endpoint is fine and answering in under a second.
+LLM_PREFLIGHT_BODY = (
+    '{"error":"An error occurred during remember: LLM connection test timed out '
+    "after 30s. Check that your LLM endpoint is reachable and responding. Set "
+    'COGNEE_SKIP_CONNECTION_TEST=true to bypass this check."}'
+)
+
+
+def test_llm_preflight_failure_is_explained_not_echoed():
+    client, _ = make_client(status=409)
+    client.http.request.return_value.text = LLM_PREFLIGHT_BODY
+
+    with pytest.raises(CogneeError) as excinfo:
+        client.remember("some fact", dataset="d")
+    msg = str(excinfo.value)
+
+    # Names the real subsystem and the real likely causes.
+    assert "credentials" in msg.lower() or "quota" in msg.lower()
+    # Points at Cognee's own LLM config, not Kiwi's chat provider.
+    assert ".cognee_compose.env" in msg
+    # Still identifies the request that failed.
+    assert "409" in msg
+
+
+def test_llm_preflight_failure_does_not_suggest_skipping_the_check():
+    # Skipping the preflight only defers the failure: cognify still needs real LLM
+    # calls and dies seconds later with a worse message.
+    client, _ = make_client(status=409)
+    client.http.request.return_value.text = LLM_PREFLIGHT_BODY
+
+    with pytest.raises(CogneeError) as excinfo:
+        client.remember("some fact", dataset="d")
+
+    assert "COGNEE_SKIP_CONNECTION_TEST" not in str(excinfo.value)
+
+
+def test_unrelated_4xx_bodies_are_still_passed_through_verbatim():
+    client, _ = make_client(status=422)
+    client.http.request.return_value.text = '{"detail":"dataset name is required"}'
+
+    with pytest.raises(CogneeError, match="dataset name is required"):
+        client.recall("q", dataset="d")
+
+
 def test_5xx_retries_once_then_succeeds():
     http = MagicMock()
     bad = MagicMock(status_code=500, text="boom")

@@ -54,7 +54,7 @@ def get_llm_client():
     if provider == "anthropic" and anthropic:
         return "anthropic", anthropic.Anthropic(api_key=api_key), model or "claude-opus-4-8"
     elif provider == "gemini" and genai:
-        return "gemini", genai.Client(api_key=api_key), model or "gemini-3-flash-preview"
+        return "gemini", genai.Client(api_key=api_key), model or "gemini-3.6-flash"
     elif provider == "openai" and openai:
         return "openai", openai.OpenAI(api_key=api_key), model or "gpt-5.5"
     return None, None, None
@@ -75,7 +75,7 @@ def ask_llm(provider, client, prompt: str, system_instruction: str = "You are Ki
     elif provider == "gemini":
         try:
             response = client.models.generate_content(
-                model=model or "gemini-3-flash-preview",
+                model=model or "gemini-3.6-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
@@ -118,7 +118,7 @@ def stream_llm(provider, client, prompt: str, system_instruction: str = "You are
         try:
             from google.genai import types
             response = client.models.generate_content_stream(
-                model=model or "gemini-3-flash-preview",
+                model=model or "gemini-3.6-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,

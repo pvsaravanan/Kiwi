@@ -214,7 +214,7 @@ function App() {
             if (provider === 'Anthropic') {
               setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Choose Anthropic model:\n1. claude-fable-5\n2. claude-opus-4-8\n3. claude-sonnet-5\n4. claude-haiku-4-5-20251001\nEnter number (1-4):' }])
             } else if (provider === 'Gemini') {
-              setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Choose Gemini model:\n1. gemini-3.5-flash\n2. gemini-3.1-flash-lite\n3. gemini-3.1-pro-preview\n4. gemini-3-flash-preview\nEnter number (1-4):' }])
+              setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Choose Gemini model:\n1. gemini-3.6-flash\n2. gemini-3.5-flash\n3. gemini-3.5-flash-lite\n4. gemini-3.1-flash-lite\n5. gemini-2.5-flash\nEnter number (1-5):' }])
             } else if (provider === 'OpenAI') {
               setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: 'Choose OpenAI model:\n1. gpt-5.5-pro-2026-04-23\n2. gpt-5.5\n3. gpt-5.4-pro-2026-03-05\n4. gpt-5.4\n5. gpt-5.4-mini\nEnter number (1-5):' }])
             }
@@ -228,10 +228,11 @@ function App() {
             else if (val === '3' || val === 'claude-sonnet-5') model = 'claude-sonnet-5'
             else if (val === '4' || val === 'claude-haiku-4-5-20251001') model = 'claude-haiku-4-5-20251001'
           } else if (loginState.llmProvider === 'Gemini') {
-            if (val === '1' || val === 'gemini-3.5-flash') model = 'gemini-3.5-flash'
-            else if (val === '2' || val === 'gemini-3.1-flash-lite') model = 'gemini-3.1-flash-lite'
-            else if (val === '3' || val === 'gemini-3.1-pro-preview') model = 'gemini-3.1-pro-preview'
-            else if (val === '4' || val === 'gemini-3-flash-preview') model = 'gemini-3-flash-preview'
+            if (val === '1' || val === 'gemini-3.6-flash') model = 'gemini-3.6-flash'
+            else if (val === '2' || val === 'gemini-3.5-flash') model = 'gemini-3.5-flash'
+            else if (val === '3' || val === 'gemini-3.5-flash-lite') model = 'gemini-3.5-flash-lite'
+            else if (val === '4' || val === 'gemini-3.1-flash-lite') model = 'gemini-3.1-flash-lite'
+            else if (val === '5' || val === 'gemini-2.5-flash') model = 'gemini-2.5-flash'
           } else if (loginState.llmProvider === 'OpenAI') {
             if (val === '1' || val === 'gpt-5.5-pro-2026-04-23') model = 'gpt-5.5-pro-2026-04-23'
             else if (val === '2' || val === 'gpt-5.5') model = 'gpt-5.5'
@@ -245,7 +246,7 @@ function App() {
             if (loginState.llmProvider === 'Anthropic') {
               optionsStr = 'Choose Anthropic model:\n1. claude-fable-5\n2. claude-opus-4-8\n3. claude-sonnet-5\n4. claude-haiku-4-5-20251001\nEnter number (1-4):'
             } else if (loginState.llmProvider === 'Gemini') {
-              optionsStr = 'Choose Gemini model:\n1. gemini-3.5-flash\n2. gemini-3.1-flash-lite\n3. gemini-3.1-pro-preview\n4. gemini-3-flash-preview\nEnter number (1-4):'
+              optionsStr = 'Choose Gemini model:\n1. gemini-3.6-flash\n2. gemini-3.5-flash\n3. gemini-3.5-flash-lite\n4. gemini-3.1-flash-lite\n5. gemini-2.5-flash\nEnter number (1-5):'
             } else if (loginState.llmProvider === 'OpenAI') {
               optionsStr = 'Choose OpenAI model:\n1. gpt-5.5-pro-2026-04-23\n2. gpt-5.5\n3. gpt-5.4-pro-2026-03-05\n4. gpt-5.4\n5. gpt-5.4-mini\nEnter number (1-5):'
             }
@@ -380,7 +381,7 @@ function App() {
         if (loginState.llmProvider === 'Anthropic') {
           content = 'Choose Anthropic model:\n1. claude-fable-5\n2. claude-opus-4-8\n3. claude-sonnet-5\n4. claude-haiku-4-5-20251001\nEnter number (1-4):'
         } else if (loginState.llmProvider === 'Gemini') {
-          content = 'Choose Gemini model:\n1. gemini-3.5-flash\n2. gemini-3.1-flash-lite\n3. gemini-3.1-pro-preview\n4. gemini-3-flash-preview\nEnter number (1-4):'
+          content = 'Choose Gemini model:\n1. gemini-3.6-flash\n2. gemini-3.5-flash\n3. gemini-3.5-flash-lite\n4. gemini-3.1-flash-lite\n5. gemini-2.5-flash\nEnter number (1-5):'
         } else if (loginState.llmProvider === 'OpenAI') {
           content = 'Choose OpenAI model:\n1. gpt-5.5-pro-2026-04-23\n2. gpt-5.5\n3. gpt-5.4-pro-2026-03-05\n4. gpt-5.4\n5. gpt-5.4-mini\nEnter number (1-5):'
         } else {
